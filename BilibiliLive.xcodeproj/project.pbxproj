@@ -1034,7 +1034,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MEWHFZ92DY;
+				DEVELOPMENT_TEAM = 262VHA5WRL;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
@@ -1049,13 +1049,13 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.etan.tv.BilibiliLive;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hp.tv.BilibiliLive;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "BilibiliLive/Supporting Files/BilibiliLive-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Debug;
 		};
@@ -1086,7 +1086,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "BilibiliLive/Supporting Files/BilibiliLive-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Release;
 		};

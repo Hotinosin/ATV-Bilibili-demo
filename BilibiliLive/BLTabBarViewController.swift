@@ -27,29 +27,33 @@ class BLTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         delegate = self
         var vcs = [UIViewController]()
 
-        let liveVC = LiveViewController()
-        liveVC.tabBarItem.title = "直播"
-        vcs.append(liveVC)
+        let followVC = FollowsViewController()
+        followVC.tabBarItem.title = "关注"
+        vcs.append(followVC)
 
         let feedVC = FeedViewController()
         feedVC.tabBarItem.title = "推荐"
         vcs.append(feedVC)
 
-        let hotVC = HotViewController()
-        hotVC.tabBarItem.title = "热门"
-        vcs.append(hotVC)
+        let liveVC = LiveViewController()
+        liveVC.tabBarItem.title = "直播"
+        vcs.append(liveVC)
 
-        let rank = RankingViewController()
-        rank.tabBarItem.title = "排行榜"
-        vcs.append(rank)
-
-        let followVC = FollowsViewController()
-        followVC.tabBarItem.title = "关注"
-        vcs.append(followVC)
+        let hisVC = HistoryViewController()
+        hisVC.tabBarItem.title = "历史"
+        vcs.append(hisVC)
 
         let fav = FavoriteViewController()
         fav.tabBarItem.title = "收藏"
         vcs.append(fav)
+
+        let hotVC = HotViewController()
+        hotVC.tabBarItem.title = "热门"
+        vcs.append(hotVC)
+
+//        let rank = RankingViewController()
+//        rank.tabBarItem.title = "排行榜"
+//        vcs.append(rank)
 
         let persionVC = PersonalViewController.create()
         persionVC.extendedLayoutIncludesOpaqueBars = true

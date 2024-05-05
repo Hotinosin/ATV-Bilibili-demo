@@ -13,12 +13,12 @@ class LiveViewController: CategoryViewController {
     override func viewDidLoad() {
         categories = [
             CategoryDisplayModel(title: "关注", contentVC: MyLiveViewController()),
+            CategoryDisplayModel(title: "手游", contentVC: AreaLiveViewController(areaID: 3)),
             CategoryDisplayModel(title: "推荐", contentVC: AreaLiveViewController(areaID: -1)),
             CategoryDisplayModel(title: "人气", contentVC: AreaLiveViewController(areaID: 0)),
             CategoryDisplayModel(title: "娱乐", contentVC: AreaLiveViewController(areaID: 1)),
             CategoryDisplayModel(title: "虚拟主播", contentVC: AreaLiveViewController(areaID: 9)),
             CategoryDisplayModel(title: "网游", contentVC: AreaLiveViewController(areaID: 2)),
-            CategoryDisplayModel(title: "手游", contentVC: AreaLiveViewController(areaID: 3)),
             CategoryDisplayModel(title: "单机", contentVC: AreaLiveViewController(areaID: 6)),
             CategoryDisplayModel(title: "生活", contentVC: AreaLiveViewController(areaID: 10)),
             CategoryDisplayModel(title: "电台", contentVC: AreaLiveViewController(areaID: 5)),
@@ -33,7 +33,7 @@ class MyLiveViewController: StandardVideoCollectionViewController<LiveRoom> {
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.styleOverride = .sideBar
-        collectionVC.pageSize = 10
+        collectionVC.pageSize = 5
         reloadInterval = 15 * 60
     }
 

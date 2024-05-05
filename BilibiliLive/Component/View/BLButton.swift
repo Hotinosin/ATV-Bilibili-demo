@@ -122,7 +122,7 @@ class BLCustomTextButton: BLButton {
 
     override func setup() {
         super.setup()
-        effectView.layer.cornerRadius = 10
+        effectView.layer.cornerRadius = 18
         effectView.contentView.addSubview(titleLabel)
         titleLabel.snp.makeConstraints { make in
             make.top.bottom.equalToSuperview().inset(10)
@@ -165,7 +165,8 @@ class BLButton: UIControl {
         selectedWhiteView.isHidden = !isFocused
         addSubview(effectView)
         effectView.isUserInteractionEnabled = false
-        effectView.layer.cornerRadius = 8
+        effectView.layer.cornerRadius = 18
+//        播放详情页面按钮圆角
         effectView.clipsToBounds = true
         effectView.snp.makeConstraints { make in
             make.top.leading.trailing.equalToSuperview()

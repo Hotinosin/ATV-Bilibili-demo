@@ -5,18 +5,20 @@
 //  Created by Etan on 2021/3/28.
 //
 
+import Combine
 import Foundation
+@_spi(WebSocket) import Alamofire
 import Gzip
-import Starscream
 import SwiftyJSON
 
-class LiveDanMuProvider {
-    private var websocket: WebSocket?
+class LiveDanMuProvider: DanmuProviderProtocol {
+    let observerPlayerTime = false
+    var onSendTextModel = PassthroughSubject<DanmakuTextCellModel, Never>()
+
+    private var websocket: WebSocketRequest?
     private var heartBeatTimer: Timer?
     private let roomID: Int
     private var token = ""
-    var onDanmu: ((String) -> Void)?
-    var onSC: ((String) -> Void)?
 
     init(roomID: Int) {
         self.roomID = roomID
@@ -26,6 +28,8 @@ class LiveDanMuProvider {
         stop()
     }
 
+    func playerTimeChange(time: TimeInterval) {}
+
     func start() async throws {
         let info = try await WebRequest.requestDanmuServerInfo(roomID: roomID)
         guard let server = info.host_list.first else {
@@ -34,21 +38,24 @@ class LiveDanMuProvider {
         }
         Logger.info("Get room server info \(server.host):\(server.wss_port)")
         token = info.token
-        var request = URLRequest(url: URL(string: "wss://\(server.host):\(server.wss_port)/sub")!)
-        request.allHTTPHeaderFields = ["User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
-                                       "Referer": "https://live.bilibili.com"]
-        websocket = WebSocket(request: request)
-        websocket?.delegate = self
-        websocket?.connect()
+        var afheaders = HTTPHeaders()
+        afheaders.add(.userAgent(Keys.userAgent))
+        afheaders.add(HTTPHeader(name: "Referer", value: Keys.referer))
+
+        websocket = AF.webSocketRequest(to: "wss://\(server.host):\(server.wss_port)/sub", headers: afheaders).streamMessageEvents { [weak self] event in
+            self?.handleWebsocketEvent(event: event)
+        }
     }
 
     func stop() {
-        websocket?.disconnect()
+        websocket?.close(sending: .normalClosure)
         heartBeatTimer?.invalidate()
     }
 
     private func setupHeartBeat() {
-        heartBeatTimer = Timer.scheduledTimer(timeInterval: 30, target: self, selector: #selector(sendHeartBeat), userInfo: nil, repeats: true)
+        heartBeatTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true, block: { [weak self] _ in
+            self?.sendHeartBeat()
+        })
         sendHeartBeat()
     }
 
@@ -59,15 +66,14 @@ class LiveDanMuProvider {
     }
 
     @objc private func sendHeartBeat() {
-        let data = getHeartbeatPackage()
-        websocket?.write(data: data)
+        websocket?.send(.data(getHeartbeatPackage()), completionHandler: { _ in })
     }
 
     private func sendJoinLiveRoom() {
         let mid = ApiRequest.getToken()?.mid ?? 0
         let package = AuthPackage(uid: mid, roomid: roomID, buvid: CookieHandler.shared.buvid3(), key: token)
         let data = LiveWSHeader.encode(operatorType: .auth, data: package.encode())
-        websocket?.write(data: data)
+        websocket?.send(.data(data), completionHandler: { _ in })
     }
 }
 
@@ -114,17 +120,25 @@ extension LiveDanMuProvider {
                 let cmd = json["cmd"].stringValue
                 switch cmd {
                 case "DANMU_MSG":
-                    if let str = json["info"][1].string { onDanmu?(str) }
+                    if let str = json["info"][1].string {
+                        let model = DanmakuTextCellModel(str: str)
+                        onSendTextModel.send(model)
+                    }
                 case "DM_INTERACTION":
                     guard let data = json["data"]["data"].string else { return }
                     let comboArr = JSON(parseJSON: data)["combo"]
                     for combo in comboArr.arrayValue {
-                        if let str = combo["content"].string, let cnt = combo["cnt"].int {
-                            onDanmu?("\(str) x\(cnt)")
+                        if let str = combo["content"].string {
+                            let model = DanmakuTextCellModel(str: str)
+                            onSendTextModel.send(model)
                         }
                     }
                 case "SUPER_CHAT_MESSAGE":
-                    if let str = json["data"]["message"].string { onSC?(str) }
+                    if let str = json["data"]["message"].string {
+                        let model = DanmakuTextCellModel(str: str)
+                        model.type = .top
+                        model.displayTime = 60
+                    }
                 default:
                     break
                 }
@@ -142,21 +156,21 @@ extension LiveDanMuProvider {
 
 // MARK: WebSocketDelegate
 
-extension LiveDanMuProvider: WebSocketDelegate {
-    func didReceive(event: Starscream.WebSocketEvent, client: Starscream.WebSocketClient) {
-        switch event {
+extension LiveDanMuProvider {
+    func handleWebsocketEvent(event: WebSocketRequest.Event<URLSessionWebSocketTask.Message, Never>) {
+        switch event.kind {
         case .connected:
             Logger.info("websocket connected")
             sendJoinLiveRoom()
             setupHeartBeat()
         case .disconnected:
             Logger.info("websocket disconnected")
-        case let .binary(data):
-            parseData(data: data)
-        case let .error(error):
-            Logger.info("websocket error: \(String(describing: error))")
+        case let .receivedMessage(message):
+            if case let .data(data) = message {
+                parseData(data: data)
+            }
         default:
-            break
+            Logger.warn(event)
         }
     }
 }

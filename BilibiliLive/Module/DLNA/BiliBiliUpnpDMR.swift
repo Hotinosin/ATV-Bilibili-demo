@@ -14,12 +14,16 @@ import UIKit
 
 class BiliBiliUpnpDMR: NSObject {
     static let shared = BiliBiliUpnpDMR()
+
+    weak var currentPlugin: BUpnpPlugin?
+
     private var udp: GCDAsyncUdpSocket!
     private var httpServer = HttpServer()
     private var connectedSockets = [GCDAsyncSocket]()
     @MainActor private var sessions = Set<NVASession>()
     private var started = false
     private var ip: String?
+    private var boardcastTimer: Timer?
 
     private lazy var serverInfo: String = {
         let file = Bundle.main.url(forResource: "DLNAInfo", withExtension: "xml")!
@@ -126,6 +130,8 @@ class BiliBiliUpnpDMR: NSObject {
     }
 
     func stop() {
+        boardcastTimer?.invalidate()
+        boardcastTimer = nil
         udp?.close()
         httpServer.stop()
         started = false
@@ -159,6 +165,13 @@ class BiliBiliUpnpDMR: NSObject {
             } catch let err {
                 started = false
                 Logger.warn("dmr start fail", err.localizedDescription)
+            }
+        }
+        boardcastTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) {
+            [weak self] _ in
+            guard let self else { return }
+            if let data = getSSDPNotify().data(using: .utf8) {
+                udp.send(data, toHost: "239.255.255.250", port: 1900, withTimeout: 1, tag: 0)
             }
         }
     }
@@ -212,6 +225,25 @@ class BiliBiliUpnpDMR: NSObject {
         """
     }
 
+    private func getSSDPNotify() -> String {
+        guard let ip = ip ?? getIPAddress() else {
+            Logger.debug("no ip")
+            return ""
+        }
+        let text = """
+        NOTIFY * HTTP/1.1
+        Host: 239.255.255.250:1900
+        Location: http://\(ip):9958/description.xml
+        Cache-Control: max-age=30
+        Server: Linux/3.0.0, UPnP/1.0, Platinum/1.0.5.13
+        NTS: ssdp:alive
+        USN: uuid:\(bUuid)::urn:schemas-upnp-org:device:MediaRenderer:1
+        NT: urn:schemas-upnp-org:device:MediaRenderer:1
+
+        """
+        return text
+    }
+
     func handleEvent(frame: NVASession.NVAFrame, session: NVASession) {
         let topMost = UIViewController.topMostViewController()
         switch frame.action {
@@ -221,21 +253,21 @@ class BiliBiliUpnpDMR: NSObject {
             handlePlay(json: JSON(parseJSON: frame.body))
             session.sendEmpty()
         case "Pause":
-            (topMost as? VideoPlayerViewController)?.player?.pause()
+            currentPlugin?.pause()
             session.sendEmpty()
         case "Resume":
-            (topMost as? VideoPlayerViewController)?.player?.play()
+            currentPlugin?.resume()
             session.sendEmpty()
         case "SwitchDanmaku":
             let json = JSON(parseJSON: frame.body)
-            (topMost as? VideoPlayerViewController)?.danMuView.isHidden = !json["open"].boolValue
+            Defaults.shared.showDanmu = json["open"].boolValue
             session.sendEmpty()
         case "Seek":
             let json = JSON(parseJSON: frame.body)
-            (topMost as? VideoPlayerViewController)?.player?.seek(to: CMTime(seconds: json["seekTs"].doubleValue, preferredTimescale: 1), toleranceBefore: .zero, toleranceAfter: .zero)
+            currentPlugin?.seek(to: json["seekTs"].doubleValue)
             session.sendEmpty()
         case "Stop":
-            (topMost as? VideoPlayerViewController)?.dismiss(animated: true)
+            (topMost as? CommonPlayerViewController)?.dismiss(animated: true)
             session.sendEmpty()
         case "PlayUrl":
             let json = JSON(parseJSON: frame.body)
@@ -256,22 +288,11 @@ class BiliBiliUpnpDMR: NSObject {
     }
 
     func handlePlay(json: JSON) {
-        let topMost = UIViewController.topMostViewController()
-        let aid = json["aid"].intValue
-        let cid = json["cid"].intValue
-        let epid = json["epid"].intValue
-        let player: VideoDetailViewController
-        if epid > 0 {
-            player = VideoDetailViewController.create(epid: epid)
+        let roomId = json["roomId"].stringValue
+        if roomId.count > 0, let room = Int(roomId), room > 0 {
+            playLive(roomID: room)
         } else {
-            player = VideoDetailViewController.create(aid: aid, cid: cid)
-        }
-        if let _ = AppDelegate.shared.window!.rootViewController?.presentedViewController {
-            AppDelegate.shared.window!.rootViewController?.dismiss(animated: false) {
-                player.present(from: UIViewController.topMostViewController(), direatlyEnterVideo: true)
-            }
-        } else {
-            player.present(from: topMost, direatlyEnterVideo: true)
+            playVideo(json: json)
         }
     }
 
@@ -310,6 +331,35 @@ class BiliBiliUpnpDMR: NSObject {
          let data = ["playItem": playItem, "qnDesc": mockQnDesc, "title": "null"] as [String: Any]
          Array(sessions).forEach { $0.sendCommand(action: "OnEpisodeSwitch", content: data) }
           */
+    }
+}
+
+extension BiliBiliUpnpDMR {
+    func playLive(roomID: Int) {
+        let player = LivePlayerViewController()
+        player.room = LiveRoom(title: "", room_id: roomID, uname: "", keyframe: nil, face: nil, cover_from_user: nil)
+        UIViewController.topMostViewController().present(player, animated: true)
+    }
+
+    func playVideo(json: JSON) {
+        let aid = json["aid"].intValue
+        let cid = json["cid"].intValue
+        let epid = json["epid"].intValue
+
+        let player: VideoDetailViewController
+        if epid > 0 {
+            player = VideoDetailViewController.create(epid: epid)
+        } else {
+            player = VideoDetailViewController.create(aid: aid, cid: cid)
+        }
+        let topMost = UIViewController.topMostViewController()
+        if let _ = AppDelegate.shared.window!.rootViewController?.presentedViewController {
+            AppDelegate.shared.window!.rootViewController?.dismiss(animated: false) {
+                player.present(from: UIViewController.topMostViewController(), direatlyEnterVideo: true)
+            }
+        } else {
+            player.present(from: topMost, direatlyEnterVideo: true)
+        }
     }
 }
 

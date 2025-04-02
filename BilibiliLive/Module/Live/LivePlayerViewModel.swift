@@ -6,6 +6,7 @@
 //
 
 import Alamofire
+import Foundation
 import SwiftyJSON
 
 enum LiveError: String, LocalizedError {
@@ -157,7 +158,7 @@ class LivePlayerViewModel {
 
     func playFirstInfo() async throws {
         if let info = playInfos.first {
-            Logger.debug("play =>", playInfos)
+            Logger.debug("play => \(playInfos)")
             await MainActor.run {
                 playPlugin.play(urlString: info.url)
             }
@@ -167,7 +168,7 @@ class LivePlayerViewModel {
     }
 
     @MainActor private func initDanmu() async -> [CommonPlayerPlugin] {
-        danMuProvider = LiveDanMuProvider(roomID: roomID)
+        danMuProvider = LiveDanMuProvider(roomID: roomID, removeDup: Settings.enableDanmuRemoveDup)
         let danmuPlugin = DanmuViewPlugin(provider: danMuProvider!)
 
         try? await danMuProvider?.start()

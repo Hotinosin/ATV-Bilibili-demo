@@ -28,7 +28,8 @@ class VideoPlayerViewModel {
     var nextProvider: VideoNextProvider?
 
     private var playInfo: PlayInfo
-    private let danmuProvider = VideoDanmuProvider()
+    private let danmuProvider = VideoDanmuProvider(enableDanmuFilter: Settings.enableDanmuFilter,
+                                                   enableDanmuRemoveDup: Settings.enableDanmuRemoveDup)
     private var videoDetail: VideoDetail?
     private var cancellable = Set<AnyCancellable>()
     private var playPlugin: CommonPlayerPlugin?
@@ -161,6 +162,11 @@ class VideoPlayerViewModel {
         if let clips = data.clips {
             let clip = BVideoClipsPlugin(clipInfos: clips)
             plugins.append(clip)
+        }
+
+        if Settings.enableSponsorBlock != .none, let bvid = data.detail?.View.bvid, let duration = data.detail?.View.duration {
+            let sponsor = SponsorSkipPlugin(bvid: bvid, duration: duration)
+            plugins.append(sponsor)
         }
 
         if Settings.danmuMask {

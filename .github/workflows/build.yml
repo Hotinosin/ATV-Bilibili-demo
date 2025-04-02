@@ -2,7 +2,7 @@ name: Build workflow
 on:
   pull_request:
   push:
-    branches: [ "main" ]
+    branches: [ "feat/edit" ]
 
 jobs:
   build:
@@ -39,6 +39,6 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: main-unsigned.ipa
+          name: feat-edit-unsigned.ipa
           path: BilbiliAtvDemo.ipa
           retention-days: 60

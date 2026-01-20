@@ -34,12 +34,13 @@ enum WebRequest {
         static let favFolderCollectedList = "https://api.bilibili.com/x/v3/fav/folder/collected/list"
         static let favSeason = "https://api.bilibili.com/x/space/fav/season/list"
         static let reportHistory = "https://api.bilibili.com/x/v2/history/report"
+        static let heartbeat = "https://api.bilibili.com/x/click-interface/web/heartbeat"
         static let upSpace = "https://api.bilibili.com/x/space/wbi/arc/search"
         static let like = "https://api.bilibili.com/x/web-interface/archive/like"
         static let likeStatus = "https://api.bilibili.com/x/web-interface/archive/has/like"
         static let coin = "https://api.bilibili.com/x/web-interface/coin/add"
-        static let playerInfo = "https://api.bilibili.com/x/player/v2"
-        static let playUrl = "https://api.bilibili.com/x/player/playurl"
+        static let playerInfo = "https://api.bilibili.com/x/player/wbi/v2"
+        static let playUrl = "https://api.bilibili.com/x/player/wbi/playurl"
         static let pcgPlayUrl = "https://api.bilibili.com/pgc/player/web/playurl"
         static let bangumiSeason = "https://bangumi.bilibili.com/view/web_api/season"
         static let userEpisodeInfo = "https://api.bilibili.com/pgc/season/episode/web/info"
@@ -83,21 +84,33 @@ enum WebRequest {
         }
         session.sessionConfiguration.timeoutIntervalForResource = 10
         session.sessionConfiguration.timeoutIntervalForRequest = 10
-        session.request(url,
-                        method: method,
-                        parameters: parameters,
-                        encoding: URLEncoding.default,
-                        headers: afheaders,
-                        interceptor: nil)
-            .responseData { response in
-                switch response.result {
-                case let .success(data):
-                    complete?(.success(data))
-                case let .failure(err):
-                    print(err)
-                    complete?(.failure(.networkFail))
-                }
+
+        let completionHandler: (AFDataResponse<Data>) -> Void = { response in
+            switch response.result {
+            case let .success(data):
+                complete?(.success(data))
+            case let .failure(err):
+                print(err)
+                complete?(.failure(.networkFail))
             }
+        }
+
+        addWbiSign(method: method, url: url, parameters: parameters) { wbiSign in
+            if let wbiSign {
+                session.request(wbiSign,
+                                method: method,
+                                encoding: URLEncoding.default,
+                                headers: afheaders)
+                    .responseData(completionHandler: completionHandler)
+            } else {
+                session.request(url,
+                                method: method,
+                                parameters: parameters,
+                                encoding: URLEncoding.default,
+                                headers: afheaders)
+                    .responseData(completionHandler: completionHandler)
+            }
+        }
     }
 
     static func requestJSON(method: HTTPMethod = .get,
@@ -116,11 +129,20 @@ enum WebRequest {
                 if errorCode != 0 {
                     let message = json["message"].stringValue
                     print(errorCode, message)
+
+                    // Handle captcha validation error (-352)
+                    if errorCode == -352 {
+                        Logger.warn("WbiSign error (code=-352), clearing cache. URL: \(url)")
+                        WbiKeysCache.shared.clear()
+                    }
+
                     complete?(.failure(.statusFail(code: errorCode, message: message)))
                     return
                 }
                 let dataj = json[dataObj]
-                print("\(url) response: \(json)")
+                #if DEBUG
+                    print("\(url) response: \(json)")
+                #endif
                 complete?(.success(dataj))
             case let .failure(err):
                 complete?(.failure(err))
@@ -145,10 +167,11 @@ enum WebRequest {
                     let object = try (decoder ?? JSONDecoder()).decode(T.self, from: data)
                     complete?(.success(object))
                 } catch let err {
-                    print("decode fail:", err)
+                    Logger.warn("decode fail: \(err)")
                     complete?(.failure(.decodeFail(message: err.localizedDescription + String(describing: err))))
                 }
             case let .failure(err):
+                Logger.warn("request fail: \(err)")
                 complete?(.failure(err))
             }
         }
@@ -172,7 +195,7 @@ enum WebRequest {
             switch response {
             case let .success(data):
                 do {
-                    let protobufObject = try T(serializedData: data)
+                    let protobufObject = try T(serializedBytes: data)
                     complete?(.success(protobufObject))
                 } catch let err {
                     Logger.warn("Protobuf parsing error: \(err.localizedDescription)")
@@ -246,8 +269,8 @@ extension WebRequest {
         return info
     }
 
-    static func requestBangumiInfo(seasonID: Int) async throws -> BangumiSeasonInfo {
-        let res: BangumiSeasonInfo = try await request(url: "https://api.bilibili.com/pgc/web/season/section", parameters: ["season_id": seasonID], dataObj: "result")
+    static func requestBangumiInfo(seasonID: Int) async throws -> BangumiInfo {
+        let res: BangumiInfo = try await request(url: "https://api.bilibili.com/pgc/view/web/season", parameters: ["season_id": seasonID], dataObj: "result")
         return res
     }
 
@@ -328,10 +351,38 @@ extension WebRequest {
         return res.medias ?? []
     }
 
-    static func reportWatchHistory(aid: Int, cid: Int, currentTime: Int) {
+    static func reportWatchHistory(aid: Int, cid: Int, currentTime: Int, epid: Int? = nil, seasonId: Int? = nil, subType: Int? = nil) {
+        var parameters: [String: Any] = [
+            "aid": aid,
+            "cid": cid,
+            "played_time": currentTime,
+        ]
+
+        if epid ?? 0 > 0 || seasonId ?? 0 > 0 {
+            // 番剧类型标识
+            parameters["type"] = 4
+            parameters["sub_type"] = subType ?? 1
+
+            // 番剧ID
+            if let epid = epid {
+                parameters["epid"] = epid
+            }
+            if let seasonId = seasonId {
+                parameters["sid"] = seasonId
+            }
+
+            // Web平台标识（关键：用于正确识别番剧历史记录）
+            parameters["mobi_app"] = "web"
+            parameters["device"] = "web"
+            parameters["platform"] = "web"
+        } else {
+            parameters["type"] = 3
+            parameters["sub_type"] = 0
+        }
+
         requestJSON(method: .post,
-                    url: EndPoint.reportHistory,
-                    parameters: ["aid": aid, "cid": cid, "progress": currentTime],
+                    url: EndPoint.heartbeat,
+                    parameters: parameters,
                     complete: nil)
     }
 
@@ -392,6 +443,10 @@ extension WebRequest {
 
     static func requestFavorite(aid: Int, mid: Int) {
         requestJSON(method: .post, url: "https://api.bilibili.com/x/v3/fav/resource/deal", parameters: ["rid": aid, "type": 2, "add_media_ids": mid])
+    }
+
+    static func removeFavorite(aid: Int, mid: [Int]) {
+        requestJSON(method: .post, url: "https://api.bilibili.com/x/v3/fav/resource/deal", parameters: ["rid": aid, "type": 2, "del_media_ids": mid.map { "\($0)" }.joined(separator: ",")])
     }
 
     static func requestFavoriteStatus(aid: Int, complete: ((Bool) -> Void)?) {
@@ -484,6 +539,43 @@ extension WebRequest {
         requestJSON(method: .post, url: "https://api.bilibili.com/x/relation/modify", parameters: ["fid": mid, "act": follow ? 1 : 2, "re_src": 14])
     }
 
+    static func block(mid: Int, block: Bool, complete: ((Result<JSON, RequestError>) -> Void)? = nil) {
+        requestJSON(method: .post, url: "https://api.bilibili.com/x/relation/modify", parameters: ["fid": mid, "act": block ? 5 : 6, "re_src": 14], complete: complete)
+    }
+
+    struct UpSpaceInfo: Codable, Hashable {
+        let name: String
+        let sign: String
+        let face: URL?
+        let is_followed: Bool
+        let is_risk: Bool
+    }
+
+    static func requestUpSpaceInfo(mid: Int) async throws -> UpSpaceInfo {
+        let param: Parameters = ["mid": mid]
+        let resp: UpSpaceInfo = try await request(method: .get, url: "https://api.bilibili.com/x/space/wbi/acc/info", parameters: param)
+        return resp
+    }
+
+    struct UpSpaceRelation: Codable, Hashable {
+        // 0：未关注 1：悄悄关注（已弃用）2：已关注 6：已互粉 128：已拉黑
+        let attribute: Int
+
+        var is_blocked: Bool {
+            return attribute == 128
+        }
+    }
+
+    static func requestUpSpaceRelation(mid: Int) async throws -> UpSpaceRelation {
+        struct Resp: Codable {
+            let relation: UpSpaceRelation
+        }
+
+        let param: Parameters = ["mid": mid]
+        let resp: Resp = try await request(method: .get, url: "https://api.bilibili.com/x/space/wbi/acc/relation", parameters: param)
+        return resp.relation
+    }
+
     static func logout(complete: (() -> Void)? = nil) {
         request(method: .post, url: EndPoint.logout) {
             (result: Result<[String: String], RequestError>) in
@@ -498,23 +590,18 @@ extension WebRequest {
         }
     }
 
-    static func requestLoginInfo(complete: ((Result<JSON, RequestError>) -> Void)?) {
-        requestJSON(url: "https://api.bilibili.com/x/web-interface/nav", complete: complete)
+    static func requestLoginInfo(accessKey: String? = nil, complete: ((Result<JSON, RequestError>) -> Void)?) {
+        var parameters: [String: Any] = [:]
+        if let accessKey {
+            parameters["access_key"] = accessKey
+        }
+        requestJSON(url: "https://api.bilibili.com/x/web-interface/nav", parameters: parameters, complete: complete)
     }
 }
 
 struct HistoryData: DisplayData, Codable {
     struct HistoryPage: Codable, Hashable {
         let cid: Int
-    }
-
-    let title: String
-    var ownerName: String { owner.name }
-    var avatar: URL? {
-        if owner.face != nil {
-            return URL(string: owner.face!)
-        }
-        return nil
     }
 
     let pic: URL?
@@ -524,7 +611,35 @@ struct HistoryData: DisplayData, Codable {
     let aid: Int
     let progress: Int
     let duration: Int
-//    let bangumi: BangumiData?
+    let view_at: Int
+    let stat: Stat?
+    //    let bangumi: BangumiData?
+
+    // displayData
+    let title: String
+    var ownerName: String { owner.name }
+    var avatar: URL? {
+        if owner.face != nil {
+            return URL(string: owner.face!)
+        }
+        return nil
+    }
+
+    var date: String? {
+        DateFormatter.relativeTimeStringFor(timestamp: view_at)
+    }
+
+    var overlay: DisplayOverlay? {
+        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
+        var rightItems = [DisplayOverlay.DisplayOverlayItem]()
+        rightItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: "\(TimeInterval(progress).timeString())/\(TimeInterval(duration).timeString())"))
+        return DisplayOverlay(leftItems: leftItems, rightItems: rightItems)
+    }
+
+    struct Stat: Codable, Hashable {
+        let view: Int
+        let danmaku: Int
+    }
 }
 
 struct FavData: PlayableData, Codable {
@@ -536,9 +651,17 @@ struct FavData: PlayableData, Codable {
     var ogv: Ogv?
     var ownerName: String { upper.name }
     var pic: URL? { URL(string: cover) }
+    let duration: Int
+    let cnt_info: CountInfo?
+    let pubtime: Int
 
     struct Ogv: Codable, Hashable {
         let season_id: Int?
+    }
+
+    struct CountInfo: Codable, Hashable {
+        let play: Int
+        let danmaku: Int
     }
 
     var aid: Int {
@@ -547,6 +670,22 @@ struct FavData: PlayableData, Codable {
 
     var cid: Int {
         return 0
+    }
+
+    var date: String? {
+        return ogv == nil ? DateFormatter.stringFor(timestamp: pubtime) : nil
+    }
+
+    var avatar: URL? { URL(string: upper.face ?? "") }
+    var overlay: DisplayOverlay? {
+        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
+        var rightItems = [DisplayOverlay.DisplayOverlayItem]()
+        if let stat = cnt_info {
+            leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "play.rectangle", text: stat.play == 0 ? "-" : stat.play.numberString()))
+            leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "list.bullet.rectangle", text: stat.danmaku == 0 ? "-" : stat.danmaku.numberString()))
+        }
+        rightItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: TimeInterval(duration).timeString()))
+        return DisplayOverlay(leftItems: leftItems, rightItems: rightItems)
     }
 }
 
@@ -679,6 +818,15 @@ extension VideoDetail.Info: DisplayData, PlayableData {
     }
 
     var date: String? { DateFormatter.stringFor(timestamp: pubdate) }
+
+    var overlay: DisplayOverlay? {
+        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
+        var rightItems = [DisplayOverlay.DisplayOverlayItem]()
+        leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "play.rectangle", text: stat.view == 0 ? "-" : stat.view.numberString()))
+        leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "list.bullet.rectangle", text: stat.danmaku == 0 ? "-" : stat.danmaku.numberString()))
+        rightItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: TimeInterval(duration).timeString()))
+        return DisplayOverlay(leftItems: leftItems, rightItems: rightItems)
+    }
 }
 
 struct SubtitleResp: Codable {
@@ -687,10 +835,16 @@ struct SubtitleResp: Codable {
 
 struct SubtitleData: Codable, Hashable {
     let lan_doc: String
-    let subtitle_url: URL
+    let subtitle_url: String?
     let lan: String
 
-    var url: URL { subtitle_url.addSchemeIfNeed() }
+    var url: URL? {
+        if let subtitle_url, let sub_url = URL(string: subtitle_url) {
+            return sub_url.addSchemeIfNeed()
+        }
+        return nil
+    }
+
     var subtitleContents: [SubtitleContent]?
 }
 
@@ -701,8 +855,24 @@ struct Replys: Codable, Hashable {
             let avatar: String
         }
 
+        struct Emote: Codable, Hashable {
+            let text: String
+            let url: String
+        }
+
+        struct JumpUrl: Codable, Hashable {
+            let title: String
+        }
+
         struct Content: Codable, Hashable {
             let message: String
+            let pictures: [Picture]?
+            let emote: [String: Emote]?
+            let jump_url: [String: JumpUrl]?
+
+            struct Picture: Codable, Hashable {
+                let img_src: String
+            }
         }
 
         let member: Member
@@ -726,9 +896,41 @@ struct BangumiInfo: Codable, Hashable {
         let cover: URL
         let long_title: String
         let title: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, aid, cid, cover, long_title, title
+        }
+
+        init(from decoder: Swift.Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(Int.self, forKey: .id)
+            aid = try container.decode(Int.self, forKey: .aid)
+            cid = try container.decode(Int.self, forKey: .cid)
+            cover = try container.decode(URL.self, forKey: .cover)
+            long_title = try container.decodeIfPresent(String.self, forKey: .long_title) ?? ""
+            title = try container.decode(String.self, forKey: .title)
+        }
     }
 
+    struct UserStatus: Codable, Hashable {
+        struct Progress: Codable, Hashable {
+            let last_time: Int // 最后观看的时间进度 | 单位为秒
+            let last_ep_id: Int
+            let last_ep_index: String // 最后观看的标题
+        }
+
+        let progress: Progress?
+    }
+
+    struct Section: Codable, Hashable {
+        let episodes: [Episode]
+    }
+
+    let type: Int
+    let season_id: Int
     let episodes: [Episode] // 正片剧集列表
+    let user_status: UserStatus?
+    let section: [Section]?
 }
 
 struct BangumiSeasonView: Codable, Hashable {

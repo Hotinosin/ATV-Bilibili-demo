@@ -40,6 +40,15 @@ class DanmuViewPlugin: NSObject {
     private var cancellable = Set<AnyCancellable>()
 
     private func shoot(_ model: DanmakuCellModel) {
+        // 当显示区域小于1时,将底部弹幕转为浮动弹幕
+        if danMuView.displayArea < 1, model.type == .bottom {
+            if let shootModel = model as? DanmakuTextCellModel {
+                shootModel.type = .floating
+                danMuView.shoot(danmaku: shootModel)
+                return
+            }
+        }
+
         danMuView.shoot(danmaku: model)
     }
 }
@@ -50,7 +59,8 @@ extension DanmuViewPlugin: CommonPlayerPlugin {
             return
         }
         player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1),
-                                       queue: DispatchQueue.global()) { [weak self] time in
+                                       queue: DispatchQueue.global())
+        { [weak self] time in
             guard let self else { return }
             if !Defaults.shared.showDanmu { return }
             let seconds = time.seconds

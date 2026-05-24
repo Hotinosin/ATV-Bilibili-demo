@@ -17,20 +17,82 @@ import SnapKit
 import TVUIKit
 
 class VideoDetailViewController: UIViewController {
+    private let animateTime = 0.8
+    private let infoEffectViewCornerRadius: CGFloat = 54
+    private var isCoveImageToToped: Bool = false
     private var loadingView = UIActivityIndicatorView()
     @IBOutlet var backgroundImageView: UIImageView!
     @IBOutlet var effectContainerView: UIVisualEffectView!
 
     @IBOutlet var titleLabel: UILabel!
 
+    @IBOutlet var topInfoView: UIView!
+    @IBOutlet var topInfoViewHeight: NSLayoutConstraint!
+
     @IBOutlet var upButton: BLCustomTextButton!
     @IBOutlet var followButton: BLCustomButton!
     @IBOutlet var coverImageView: UIImageView!
-    @IBOutlet var playButton: BLCustomButton!
-    @IBOutlet var likeButton: BLCustomButton!
-    @IBOutlet var coinButton: BLCustomButton!
+    @IBOutlet var coverImageViewTop: NSLayoutConstraint!
+    @IBOutlet var playButton: BLCustomButton! {
+        didSet {
+            playButton.action = { [weak self] isFocused in
+                self?.toTopContent(isFocused: isFocused)
+            }
+            playButton.cornerRadius = 34
+        }
+    }
+
+    @IBOutlet var likeButton: BLCustomButton! {
+        didSet {
+            likeButton.action = { [weak self] isFocused in
+                self?.toTopContent(isFocused: isFocused)
+            }
+            likeButton.cornerRadius = 34
+            likeButton.setTansform(x: 1.1, y: 1.1)
+        }
+    }
+
+    @IBOutlet var coinButton: BLCustomButton! {
+        didSet {
+            coinButton.action = { [weak self] isFocused in
+                self?.toTopContent(isFocused: isFocused)
+            }
+            coinButton.cornerRadius = 34
+            coinButton.setTansform(x: 1.2, y: 1.2)
+        }
+    }
+    
+    @IBOutlet var favButton: BLCustomButton! {
+        didSet {
+            favButton.action = { [weak self] isFocused in
+                self?.toTopContent(isFocused: isFocused)
+            }
+            favButton.cornerRadius = 34
+            favButton.setTansform(x: 1.3, y: 1.3)
+        }
+    }
+    
+    @IBOutlet var dislikeButton: BLCustomButton! {
+        didSet {
+            dislikeButton.action = { [weak self] isFocused in
+                self?.toTopContent(isFocused: isFocused)
+            }
+            dislikeButton.cornerRadius = 34
+            dislikeButton.setTansform(x: 1.4, y: 1.4)
+        }
+    }
+
+
     @IBOutlet var noteView: NoteDetailView!
-    @IBOutlet var dislikeButton: BLCustomButton!
+    @IBOutlet var noteViewHeight: NSLayoutConstraint!
+
+    @IBOutlet var videoDetalBgImageView: UIImageView! {
+        didSet {
+//            videoDetalBgImageView.alpha = 0.6
+        }
+    }
+
+    @IBOutlet var timeView: UIView!
 
     @IBOutlet var actionButtonSpaceView: UIView!
     @IBOutlet var durationLabel: UILabel!
@@ -40,7 +102,6 @@ class VideoDetailViewController: UIViewController {
     @IBOutlet var bvidLabel: UILabel!
     @IBOutlet var followersLabel: UILabel!
     @IBOutlet var avatarImageView: UIImageView!
-    @IBOutlet var favButton: BLCustomButton!
     @IBOutlet var pageCollectionView: UICollectionView!
     @IBOutlet var recommandCollectionView: UICollectionView!
     @IBOutlet var replysCollectionView: UICollectionView!
@@ -65,6 +126,26 @@ class VideoDetailViewController: UIViewController {
         didSet {
             if didSentCoins > 0 {
                 coinButton.isOn = true
+            }
+        }
+    }
+
+    @IBOutlet var playBgStackView: UIView! {
+        didSet {
+            if #available(tvOS 26.0, *) {
+                playBgStackView.isHidden = true
+            }
+//            playBgStackView.setAutoGlassEffectView()
+//            playBgStackView.setCornerRadius(cornerRadius: lessBigSornerRadius, shadowColor: UIColor(hex: 0x0D0D0D0D))
+        }
+    }
+
+    @IBOutlet var infoVisualEffectView: UIVisualEffectView! {
+        didSet {
+            infoVisualEffectView.layer.cornerRadius = infoEffectViewCornerRadius
+            if #available(tvOS 26.0, *) {
+                infoVisualEffectView.effect = UIGlassEffect(style: .clear)
+               
             }
         }
     }
@@ -99,6 +180,10 @@ class VideoDetailViewController: UIViewController {
         return vc
     }
 
+    deinit {
+        print("🧹 VideoDetailViewController deinitialized")
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         Task { await fetchData() }
@@ -115,30 +200,82 @@ class VideoDetailViewController: UIViewController {
             self?.present(detail, animated: true)
         }
 
-        var focusGuide = UIFocusGuide()
+        let focusGuide = UIFocusGuide()
         view.addLayoutGuide(focusGuide)
         NSLayoutConstraint.activate([
-            focusGuide.topAnchor.constraint(equalTo: upButton.topAnchor),
-            focusGuide.leftAnchor.constraint(equalTo: followButton.rightAnchor),
-            focusGuide.rightAnchor.constraint(equalTo: coverImageView.leftAnchor),
-            focusGuide.bottomAnchor.constraint(equalTo: upButton.bottomAnchor),
+            focusGuide.topAnchor.constraint(equalTo: durationLabel.topAnchor),
+            focusGuide.leftAnchor.constraint(equalTo: durationLabel.leftAnchor),
+            focusGuide.rightAnchor.constraint(equalTo: durationLabel.rightAnchor),
+            focusGuide.bottomAnchor.constraint(equalTo: durationLabel.bottomAnchor),
         ])
-        focusGuide.preferredFocusEnvironments = [followButton]
+        focusGuide.preferredFocusEnvironments = [upButton]
 
-        focusGuide = UIFocusGuide()
-        view.addLayoutGuide(focusGuide)
+        let focusGuidePlay = UIFocusGuide()
+        view.addLayoutGuide(focusGuidePlay)
         NSLayoutConstraint.activate([
-            focusGuide.topAnchor.constraint(equalTo: actionButtonSpaceView.topAnchor),
-            focusGuide.leftAnchor.constraint(equalTo: actionButtonSpaceView.leftAnchor),
-            focusGuide.rightAnchor.constraint(equalTo: actionButtonSpaceView.rightAnchor),
-            focusGuide.bottomAnchor.constraint(equalTo: actionButtonSpaceView.bottomAnchor),
+            focusGuidePlay.topAnchor.constraint(equalTo: actionButtonSpaceView.topAnchor),
+            focusGuidePlay.leftAnchor.constraint(equalTo: actionButtonSpaceView.leftAnchor),
+            focusGuidePlay.rightAnchor.constraint(equalTo: actionButtonSpaceView.rightAnchor),
+            focusGuidePlay.bottomAnchor.constraint(equalTo: actionButtonSpaceView.bottomAnchor),
         ])
-        focusGuide.preferredFocusEnvironments = [dislikeButton]
+        focusGuidePlay.preferredFocusEnvironments = [playButton]
 
-        replysCollectionView.publisher(for: \.contentSize).sink { [weak self] newSize in
-            self?.repliesCollectionViewHeightConstraints.constant = newSize.height
+        replysCollectionView.publisher(for: \.contentSize).sink { [weak self] _ in
+//            self?.repliesCollectionViewHeightConstraints.constant = newSize.height
             self?.view.setNeedsLayout()
         }.store(in: &subscriptions)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+//        animateSequentially([
+//            {
+//                self.playButton.alpha = 1
+//                self.playButton.transform = .identity
+//            },
+//
+//            {
+//                self.likeButton.alpha = 1
+//                self.likeButton.transform = .identity
+//            },
+//
+//            {
+//                self.coinButton.alpha = 1
+//                self.coinButton.transform = .identity
+//            },
+//
+//            {
+//                self.favButton.alpha = 1
+//                self.favButton.transform = .identity
+//            },
+//
+//            {
+//                self.dislikeButton.alpha = 1
+//                self.dislikeButton.transform = .identity
+//            },
+//        ])
+        
+        UIView.animate(springDuration: 0.6, bounce: 0.3) {
+           
+            self.likeButton.alpha = 1
+            self.likeButton.transform = .identity
+            self.coinButton.alpha = 1
+            self.coinButton.transform = .identity
+            self.favButton.alpha = 1
+            self.favButton.transform = .identity
+            self.dislikeButton.alpha = 1
+            self.dislikeButton.transform = .identity
+        }
+    }
+
+    private func toTopContent(isFocused: Bool) {
+//        BLAfter(afterTime: 0.1) {
+        if isFocused {
+//            if scrollView.contentOffset.y > 20 {
+            animateTopImage(isAnimateToTop: false)
+//            }
+        }
     }
 
     override var preferredFocusedView: UIView? {
@@ -181,7 +318,7 @@ class VideoDetailViewController: UIViewController {
     private func exit(with error: Error) {
         Logger.warn(error)
         let alertVC = UIAlertController(title: "获取失败", message: error.localizedDescription, preferredStyle: .alert)
-        alertVC.addAction(UIAlertAction(title: "Ok", style: .cancel, handler: { [weak self] action in
+        alertVC.addAction(UIAlertAction(title: "Ok", style: .cancel, handler: { [weak self] _ in
             self?.dismiss(animated: true)
         }))
         present(alertVC, animated: true, completion: nil)
@@ -354,7 +491,12 @@ class VideoDetailViewController: UIViewController {
             notes.append(status)
         }
         notes.append(data.View.desc ?? "")
-        noteView.label.text = notes.joined(separator: "\n")
+        if notes.count > 1 {
+            noteView.label.text = notes.joined(separator: "\n")
+        } else {
+            noteView.alpha = 0
+            noteViewHeight.constant = 1
+        }
         if !isBangumi {
             pages = data.View.pages ?? []
         }
@@ -510,6 +652,7 @@ class VideoDetailViewController: UIViewController {
 
 extension VideoDetailViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        animateTopImage(isAnimateToTop: false)
         switch collectionView {
         case pageCollectionView:
             let page = pages[indexPath.item]
@@ -551,6 +694,24 @@ extension VideoDetailViewController: UICollectionViewDelegate {
             break
         }
     }
+
+    private func animateTopImage(isAnimateToTop: Bool = false) {
+        guard isCoveImageToToped != isAnimateToTop else { return }
+        if #available(tvOS 17.0, *) {
+            UIView.animate(springDuration: self.animateTime) {
+                if isAnimateToTop {
+                    self.coverImageViewTop.constant = -630
+                    self.topInfoViewHeight.constant = 420
+                } else {
+                    self.topInfoViewHeight.constant = 820
+                    self.coverImageViewTop.constant = 0
+                    scrollView.setContentOffset(.zero, animated: false)
+                }
+                self.view?.layoutIfNeeded()
+            }
+        }
+        isCoveImageToToped = isAnimateToTop
+    }
 }
 
 extension VideoDetailViewController: UICollectionViewDataSource {
@@ -575,6 +736,11 @@ extension VideoDetailViewController: UICollectionViewDataSource {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BLTextOnlyCollectionViewCell", for: indexPath) as! BLTextOnlyCollectionViewCell
             let page = pages[indexPath.item]
             cell.titleLabel.text = page.part
+            cell.didSelect = { [weak self] isFocused in
+                if isFocused {
+                    self?.animateTopImage(isAnimateToTop: true)
+                }
+            }
             return cell
         case replysCollectionView:
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ReplyCell.self), for: indexPath) as! ReplyCell
@@ -586,11 +752,21 @@ extension VideoDetailViewController: UICollectionViewDataSource {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self), for: indexPath) as! RelatedVideoCell
             let record = allUgcEpisodes[indexPath.row]
             cell.update(data: record)
+            cell.didSelect = { [weak self] isFocused in
+                if isFocused {
+                    self?.animateTopImage(isAnimateToTop: true)
+                }
+            }
             return cell
         case recommandCollectionView:
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self), for: indexPath) as! RelatedVideoCell
             if let related = data?.Related[indexPath.row] {
                 cell.update(data: related)
+            }
+            cell.didSelect = { [weak self] isFocused in
+                if isFocused {
+                    self?.animateTopImage(isAnimateToTop: true)
+                }
             }
             return cell
         default:
@@ -600,14 +776,14 @@ extension VideoDetailViewController: UICollectionViewDataSource {
 }
 
 class BLCardView: TVCardView {
-    override func didMoveToSuperview() {
-        super.didMoveToSuperview()
-        subviews.first?.subviews.first?.subviews.last?.subviews.first?.subviews.first?.layer.cornerRadius = 12
-    }
+//    override func didMoveToSuperview() {
+//        super.didMoveToSuperview()
+//        subviews.first?.subviews.first?.subviews.last?.subviews.first?.subviews.first?.layer.cornerRadius = littleSornerRadius
+//    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        cardBackgroundColor = UIColor(named: "bgColor")
+//        contentView.setBlurEffectView(cornerRadius: lessBigSornerRadius)
     }
 }
 
@@ -631,9 +807,9 @@ extension VideoDetailViewController {
         UICollectionViewCompositionalLayout {
             _, _ in
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
-                                                  heightDimension: .estimated(200))
+                                                  heightDimension: .estimated(180))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
-            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.18), heightDimension: .estimated(200))
+            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.225), heightDimension: .estimated(180))
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
             let section = NSCollectionLayoutSection(group: group)
             section.contentInsets = .init(top: 40, leading: 0, bottom: 0, trailing: 0)
@@ -645,6 +821,7 @@ extension VideoDetailViewController {
 }
 
 class RelatedVideoCell: BLMotionCollectionViewCell {
+    var didSelect: ((_ isFocused: Bool) -> Void)?
     let titleLabel = MarqueeLabel()
     let imageView = UIImageView()
     override func setup() {
@@ -653,18 +830,24 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
         contentView.addSubview(titleLabel)
         imageView.snp.makeConstraints { make in
             make.top.left.right.equalToSuperview()
-            make.width.equalTo(imageView.snp.height).multipliedBy(14.0 / 9)
+            make.width.equalTo(imageView.snp.height).multipliedBy(16.0 / 9)
         }
-        imageView.layer.cornerRadius = 12
-        imageView.clipsToBounds = true
-        imageView.contentMode = .scaleAspectFill
+//        imageView.layer.cornerRadius = normailSornerRadius
+//        imageView.clipsToBounds = true
+//        imageView.contentMode = .scaleAspectFill
+        imageView.adjustsImageWhenAncestorFocused = true
         titleLabel.snp.makeConstraints { make in
-            make.left.right.bottom.equalToSuperview()
-            make.top.equalTo(imageView.snp.bottom).offset(6)
+            make.left.equalToSuperview().offset(12)
+            make.right.equalToSuperview().offset(-12)
+            make.bottom.equalToSuperview()
+            make.top.equalTo(imageView.snp.bottom).offset(18)
         }
         titleLabel.setContentHuggingPriority(.required, for: .vertical)
-        titleLabel.font = UIFont.systemFont(ofSize: 28)
+
+        titleLabel.font = UIFont.systemFont(ofSize: 18)
+
         titleLabel.fadeLength = 60
+
         stopScroll()
     }
 
@@ -675,6 +858,7 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
+        didSelect?(isFocused)
         if isFocused {
             startScroll()
         } else {
@@ -745,7 +929,7 @@ class NoteDetailView: UIControl {
         backgroundView.layer.shadowOffset = CGSizeMake(0, 10)
         backgroundView.layer.shadowOpacity = 0.15
         backgroundView.layer.shadowRadius = 16.0
-        backgroundView.layer.cornerRadius = 20
+        backgroundView.layer.cornerRadius = normailSornerRadius
         backgroundView.layer.cornerCurve = .continuous
         backgroundView.isHidden = !isFocused
         backgroundView.snp.makeConstraints { make in
@@ -756,12 +940,13 @@ class NoteDetailView: UIControl {
 
         addSubview(label)
         label.numberOfLines = 0
-        label.font = UIFont.systemFont(ofSize: 29)
-        label.textColor = UIColor(named: "titleColor")
+        label.font = UIFont.systemFont(ofSize: 18)
+        label.textColor = .lightGray
+        label.textAlignment = .left
         label.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview()
-            make.top.equalToSuperview().offset(14)
-            make.bottom.lessThanOrEqualToSuperview().offset(-14)
+            make.top.equalToSuperview().offset(8)
+            make.bottom.lessThanOrEqualToSuperview().offset(-8)
         }
     }
 

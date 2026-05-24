@@ -7,7 +7,11 @@
 
 import UIKit
 
-class SettingsViewController: UIViewController {
+let bigItmeCount = 3
+let largeItmeCount = 4
+let normalItmeCount = 5
+
+class SettingsViewController: UIViewController, UICollectionViewDelegate {
     class SectionModel: Hashable, Equatable {
         let title: String
         let items: [CellModel]
@@ -50,7 +54,7 @@ class SettingsViewController: UIViewController {
     }
 
     let collectionView: UICollectionView = {
-        let layout = UICollectionViewCompositionalLayout { sectionIndex, environment -> NSCollectionLayoutSection? in
+        let layout = UICollectionViewCompositionalLayout { _, _ -> NSCollectionLayoutSection? in
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(68))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
@@ -122,12 +126,26 @@ class SettingsViewController: UIViewController {
                 Toggle(title: "热门个性化推荐", setting: Settings.requestHotWithoutCookie, onChange: Settings.requestHotWithoutCookie.toggle())
             }
 
-            SectionModel(title: "界面") {
-                Navigation(title: "自定义Tab栏", desp: "") { [weak self] in
-                    let controller = TabBarCustomizationViewController()
-                    self?.present(controller, animated: true)
+            SectionModel(title: "音视频") {
+                Actions(title: "最高画质", message: "4k以上需要大会员",
+                        current: Settings.mediaQuality.desp,
+                        options: MediaQualityEnum.allCases,
+                        optionString: MediaQualityEnum.allCases.map({ $0.desp })) {
+                    Settings.mediaQuality = $0
                 }
+                Actions(title: "默认播放速度", message: "默认设置为1.0",
+                        current: Settings.mediaPlayerSpeed.name,
+                        options: PlaySpeed.blDefaults,
+                        optionString: PlaySpeed.blDefaults.map({ $0.name })) {
+                    Settings.mediaPlayerSpeed = $0
+                }
+                Toggle(title: "Avc优先(卡顿尝试开启)", setting: Settings.preferAvc, onChange: Settings.preferAvc.toggle())
+                Toggle(title: "无损音频和杜比全景声", setting: Settings.losslessAudio, onChange: Settings.losslessAudio.toggle())
+                Toggle(title: "匹配视频内容", setting: Settings.contentMatch, onChange: Settings.contentMatch.toggle())
+                Toggle(title: "仅在HDR视频匹配视频内容", setting: Settings.contentMatchOnlyInHDR, onChange: Settings.contentMatchOnlyInHDR.toggle())
+            }
 
+            SectionModel(title: "界面") {
                 Actions(title: "视频每行显示个数", message: "重启app生效",
                         current: Settings.displayStyle.desp,
                         options: FeedDisplayStyle.allCases.filter({ !$0.hideInSetting }),
@@ -144,31 +162,9 @@ class SettingsViewController: UIViewController {
                 Actions(title: "视频详情相关推荐加载模式", message: "4k以上需要大会员",
                         current: Settings.showRelatedVideoInCurrentVC ? "页面刷新" : "新页面中打开",
                         options: [true, false],
-                        optionString: ["页面刷新", "新页面中打开"])
-                {
+                        optionString: ["页面刷新", "新页面中打开"]) {
                     Settings.showRelatedVideoInCurrentVC = $0
                 }
-            }
-
-            SectionModel(title: "音视频") {
-                Actions(title: "最高画质", message: "4k以上需要大会员",
-                        current: Settings.mediaQuality.desp,
-                        options: MediaQualityEnum.allCases,
-                        optionString: MediaQualityEnum.allCases.map({ $0.desp }))
-                {
-                    Settings.mediaQuality = $0
-                }
-                Actions(title: "默认播放速度", message: "默认设置为1.0",
-                        current: Settings.mediaPlayerSpeed.name,
-                        options: PlaySpeed.blDefaults,
-                        optionString: PlaySpeed.blDefaults.map({ $0.name }))
-                {
-                    Settings.mediaPlayerSpeed = $0
-                }
-                Toggle(title: "Avc优先(卡顿尝试开启)", setting: Settings.preferAvc, onChange: Settings.preferAvc.toggle())
-                Toggle(title: "无损音频和杜比全景声", setting: Settings.losslessAudio, onChange: Settings.losslessAudio.toggle())
-                Toggle(title: "匹配视频内容", setting: Settings.contentMatch, onChange: Settings.contentMatch.toggle())
-                Toggle(title: "仅在HDR视频匹配视频内容", setting: Settings.contentMatchOnlyInHDR, onChange: Settings.contentMatchOnlyInHDR.toggle())
             }
 
             SectionModel(title: "进度控制") {
@@ -178,8 +174,7 @@ class SettingsViewController: UIViewController {
                 Actions(title: "空降助手广告屏蔽", message: "",
                         current: Settings.enableSponsorBlock.title,
                         options: SponsorBlockType.allCases,
-                        optionString: SponsorBlockType.allCases.map({ $0.title }))
-                {
+                        optionString: SponsorBlockType.allCases.map({ $0.title })) {
                     Settings.enableSponsorBlock = $0
                 }
             }
@@ -203,8 +198,7 @@ class SettingsViewController: UIViewController {
                 Actions(title: "弹幕显示区域", message: "设置弹幕显示区域",
                         current: Settings.danmuArea.title,
                         options: DanmuArea.allCases,
-                        optionString: DanmuArea.allCases.map({ $0.title }))
-                {
+                        optionString: DanmuArea.allCases.map({ $0.title })) {
                     Settings.danmuArea = $0
                 }
                 Toggle(title: "智能防档弹幕", setting: Settings.danmuMask, onChange: Settings.danmuMask.toggle())
@@ -214,8 +208,7 @@ class SettingsViewController: UIViewController {
                 Actions(title: "弹幕透明度", message: "调整弹幕的透明度",
                         current: Settings.danmuAlpha.title,
                         options: DanmuAlpha.allCases,
-                        optionString: DanmuAlpha.allCases.map({ $0.title }))
-                { value in
+                        optionString: DanmuAlpha.allCases.map({ $0.title })) { value in
                     Settings.danmuAlpha = value
                 }
 
@@ -223,8 +216,7 @@ class SettingsViewController: UIViewController {
                 Actions(title: "弹幕描边宽度", message: "调整弹幕描边的粗细",
                         current: Settings.danmuStrokeWidth.title,
                         options: DanmuStrokeWidth.allCases,
-                        optionString: DanmuStrokeWidth.allCases.map({ $0.title }))
-                { value in
+                        optionString: DanmuStrokeWidth.allCases.map({ $0.title })) { value in
                     Settings.danmuStrokeWidth = value
                 }
 
@@ -232,8 +224,7 @@ class SettingsViewController: UIViewController {
                 Actions(title: "弹幕描边透明度", message: "调整弹幕描边的透明度",
                         current: Settings.danmuStrokeAlpha.title,
                         options: DanmuStrokeAlpha.allCases,
-                        optionString: DanmuStrokeAlpha.allCases.map({ $0.title }))
-                { value in
+                        optionString: DanmuStrokeAlpha.allCases.map({ $0.title })) { value in
                     Settings.danmuStrokeAlpha = value
                 }
             }
@@ -251,8 +242,7 @@ class SettingsViewController: UIViewController {
 extension SettingsViewController {
     func Toggle(title: String, setting: @autoclosure @escaping () -> Bool,
                 onChange: @autoclosure @escaping () -> Void,
-                extraAction: ((Bool) -> Void)? = nil) -> CellModel
-    {
+                extraAction: ((Bool) -> Void)? = nil) -> CellModel {
         return CellModel(title: title, desp: setting() ? "开" : "关") {
             update in
             onChange()
@@ -266,8 +256,7 @@ extension SettingsViewController {
                     current: @autoclosure @escaping () -> String,
                     options: [T],
                     optionString: [String],
-                    onSelect: ((T) -> Void)? = nil) -> CellModel
-    {
+                    onSelect: ((T) -> Void)? = nil) -> CellModel {
         return CellModel(title: title, desp: current()) { [weak self] update in
             let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
 
@@ -289,8 +278,7 @@ extension SettingsViewController {
                    current: String,
                    placeholder: String?,
                    isSecureTextEntry: Bool = false,
-                   onSubmit: ((String?) -> Void)? = nil) -> CellModel
-    {
+                   onSubmit: ((String?) -> Void)? = nil) -> CellModel {
         return CellModel(title: title, desp: current) { [weak self] update in
             let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
             alert.addTextField { textField in
@@ -311,19 +299,9 @@ extension SettingsViewController {
             self?.present(alert, animated: true)
         }
     }
-
-    func Navigation(title: String,
-                    desp: @autoclosure @escaping () -> String,
-                    onSelect: (() -> Void)? = nil) -> CellModel
-    {
-        return CellModel(title: title, desp: desp()) { update in
-            onSelect?()
-            update()
-        }
-    }
 }
 
-extension SettingsViewController: UICollectionViewDelegate {
+extension SettingsViewController {
     private func createSnapshot(@ArrayBuilder<SectionModel> builder: () -> [SectionModel]) {
         var snapshot = NSDiffableDataSourceSnapshot<SectionModel, CellModel>()
         for section in builder() {
@@ -435,10 +413,12 @@ class SettingsHeaderView: UICollectionReusableView {
 extension FeedDisplayStyle {
     var desp: String {
         switch self {
+        case .big:
+            return "\(bigItmeCount)个"
         case .large:
-            return "3个"
+            return "\(largeItmeCount)个"
         case .normal:
-            return "4个"
+            return "\(normalItmeCount)个"
         case .sideBar:
             return "-"
         }

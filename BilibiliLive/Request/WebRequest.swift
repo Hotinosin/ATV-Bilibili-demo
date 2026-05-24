@@ -657,6 +657,7 @@ struct FavData: PlayableData, Codable {
     let cnt_info: CountInfo?
     let pubtime: Int
 
+    var intro: String?
     struct Ogv: Codable, Hashable {
         let season_id: Int?
     }

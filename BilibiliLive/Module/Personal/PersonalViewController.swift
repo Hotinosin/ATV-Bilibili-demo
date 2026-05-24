@@ -7,9 +7,17 @@
 
 import Alamofire
 import Kingfisher
-import SnapKit
 import SwiftyJSON
 import UIKit
+
+struct CellModel {
+    var iconImage: UIImage? = nil
+    let title: String
+    var desp: String? = nil
+    var autoSelect: Bool? = true
+    var contentVC: UIViewController? = nil
+    var action: (() -> Void)? = nil
+}
 
 class PersonalViewController: UIViewController, BLTabBarContentVCProtocol {
     struct CellModel {
@@ -20,116 +28,77 @@ class PersonalViewController: UIViewController, BLTabBarContentVCProtocol {
     }
 
     static func create() -> PersonalViewController {
-        return PersonalViewController()
+        return UIStoryboard(name: "Main", bundle: Bundle.main).instantiateViewController(identifier: String(describing: self)) as! PersonalViewController
     }
 
-    private let leftContainerView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private let profileContainerView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private let contentView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private let avatarImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
-        imageView.clipsToBounds = true
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        return imageView
-    }()
-
-    private let usernameLabel: UILabel = {
-        let label = UILabel()
-        label.font = UIFont.preferredFont(forTextStyle: .headline)
-        label.lineBreakMode = .byTruncatingTail
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private let leftCollectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.minimumLineSpacing = 16
-        layout.minimumInteritemSpacing = 4
-        layout.itemSize = CGSize(width: 460, height: 60)
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 0)
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .clear
-        return collectionView
-    }()
-
+    @IBOutlet var contentView: UIView!
+    @IBOutlet var avatarImageView: UIImageView!
+    @IBOutlet var usernameLabel: UILabel!
+    @IBOutlet var leftCollectionView: UICollectionView!
     weak var currentViewController: UIViewController?
+
+    @IBOutlet var menusView: UIView!
+
+    @IBOutlet var menusLeft: NSLayoutConstraint!
 
     var cellModels = [CellModel]()
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
         setupData()
         leftCollectionView.reloadData()
-        avatarImageView.layer.cornerRadius = 50
+        avatarImageView.layer.cornerRadius = avatarImageView.frame.size.width / 2
         leftCollectionView.register(BLSettingLineCollectionViewCell.self, forCellWithReuseIdentifier: "cell")
         leftCollectionView.selectItem(at: IndexPath(row: 0, section: 0), animated: false, scrollPosition: .top)
         collectionView(leftCollectionView, didSelectItemAt: IndexPath(row: 0, section: 0))
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(handleAccountUpdate),
-                                               name: AccountManager.didUpdateNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(handleTabBarPagesDidChange),
-                                               name: .tabBarPagesDidChange,
-                                               object: nil)
-        updateAccountInfo()
-        AccountManager.shared.refreshActiveAccountProfile()
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    func setupData() {
-        cellModels.removeAll()
-
-        let setting = CellModel(title: "设置", contentVC: SettingsViewController())
-        cellModels.append(setting)
-        cellModels.append(CellModel(title: "账号切换", autoSelect: false, action: { [weak self] in
-            let controller = AccountSwitcherViewController()
-            controller.modalPresentationStyle = .overFullScreen
-            self?.present(controller, animated: true)
-        }))
-
-        for page in Settings.personalPages {
-            if let model = makeCellModel(for: page) {
-                cellModels.append(model)
+        WebRequest.requestLoginInfo { [weak self] response in
+            switch response {
+            case let .success(json):
+                self?.avatarImageView.kf.setImage(with: URL(string: json["face"].stringValue))
+                self?.usernameLabel.text = json["uname"].stringValue
+            case .failure:
+                break
             }
         }
+        menusLeft.constant = 40
+    }
+
+//    override func viewWillAppear(_ animated: Bool) {
+//        super.viewWillAppear(animated)
+//
+//        BLAnimate(withDuration: 0.3) {
+//            self.menusLeft.constant = 40
+//            self.view.layoutIfNeeded()
+//        }
+//    }
+//
+//    override func viewWillDisappear(_ animated: Bool) {
+//        super.viewWillDisappear(animated)
+//        BLAnimate(withDuration: 0.3) {
+//            self.menusLeft.constant = -300
+//            self.view.layoutIfNeeded()
+//        }
+//    }
+
+    func setupData() {
+        let setting = CellModel(title: "设置", contentVC: SettingsViewController())
+        cellModels.append(setting)
+        cellModels.append(CellModel(title: "搜索", autoSelect: false, action: {
+            [weak self] in
+            let resultVC = SearchResultViewController()
+            let searchVC = UISearchController(searchResultsController: resultVC)
+            searchVC.searchResultsUpdater = resultVC
+            self?.present(UISearchContainerViewController(searchController: searchVC), animated: true)
+        }))
+        cellModels.append(CellModel(title: "关注UP", contentVC: FollowUpsViewController()))
+        cellModels.append(CellModel(title: "稍后再看", contentVC: ToViewViewController()))
+        cellModels.append(CellModel(title: "历史记录", contentVC: HistoryViewController()))
+        cellModels.append(CellModel(title: "每周必看", contentVC: WeeklyWatchViewController()))
 
         let logout = CellModel(title: "登出", autoSelect: false) {
             [weak self] in
             self?.actionLogout()
         }
         cellModels.append(logout)
-    }
-
-    private func makeCellModel(for page: TabBarPage) -> CellModel? {
-        let vc = TabBarPageVCFactory.createVC(for: page)
-        if page.requirePresentInPersonalPage {
-            return CellModel(title: page.title) { [weak self] in
-                self?.present(vc, animated: true)
-            }
-        }
-
-        return CellModel(title: page.title, contentVC: vc)
     }
 
     func setViewController(vc: UIViewController) {
@@ -152,93 +121,14 @@ class PersonalViewController: UIViewController, BLTabBarContentVCProtocol {
         let alert = UIAlertController(title: "确定登出？", message: nil, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "确定", style: .default) {
             _ in
-            WebRequest.logout {
-                ApiRequest.logout { hasRemainingAccount in
-                    if hasRemainingAccount {
-                        AccountManager.shared.refreshActiveAccountProfile()
-                    } else {
-                        AppDelegate.shared.showLogin()
-                    }
+            ApiRequest.logout { _ in
+                WebRequest.logout {
+                    AppDelegate.shared.showLogin()
                 }
             }
         })
         alert.addAction(UIAlertAction(title: "取消", style: .cancel))
         present(alert, animated: true)
-    }
-
-    @objc private func handleAccountUpdate() {
-        updateAccountInfo()
-    }
-
-    @objc private func handleTabBarPagesDidChange() {
-        setupData()
-        leftCollectionView.reloadData()
-        let firstIndexPath = IndexPath(item: 0, section: 0)
-        leftCollectionView.selectItem(at: firstIndexPath, animated: false, scrollPosition: .top)
-        collectionView(leftCollectionView, didSelectItemAt: firstIndexPath)
-    }
-
-    private func updateAccountInfo() {
-        guard let account = AccountManager.shared.activeAccount else {
-            usernameLabel.text = "未登录"
-            avatarImageView.image = nil
-            return
-        }
-        usernameLabel.text = account.profile.username
-        if let url = URL(string: account.profile.avatar), !account.profile.avatar.isEmpty {
-            avatarImageView.kf.setImage(with: url)
-        } else {
-            avatarImageView.image = UIImage(systemName: "person.crop.circle.fill")
-        }
-    }
-
-    private func setupUI() {
-        view.addSubview(leftContainerView)
-        view.addSubview(contentView)
-
-        leftContainerView.addSubview(profileContainerView)
-        leftContainerView.addSubview(leftCollectionView)
-
-        profileContainerView.addSubview(avatarImageView)
-        profileContainerView.addSubview(usernameLabel)
-
-        leftCollectionView.delegate = self
-        leftCollectionView.dataSource = self
-
-        leftContainerView.snp.makeConstraints { make in
-            make.leading.equalToSuperview()
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
-            make.bottom.equalToSuperview()
-            make.width.equalTo(500)
-        }
-
-        contentView.snp.makeConstraints { make in
-            make.leading.equalTo(leftContainerView.snp.trailing).offset(8)
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
-            make.trailing.bottom.equalToSuperview()
-        }
-
-        profileContainerView.snp.makeConstraints { make in
-            make.leading.top.trailing.equalToSuperview()
-            make.height.equalTo(100)
-        }
-
-        avatarImageView.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.top.bottom.equalToSuperview()
-            make.width.equalTo(avatarImageView.snp.height)
-        }
-
-        usernameLabel.snp.makeConstraints { make in
-            make.leading.equalTo(avatarImageView.snp.trailing).offset(20)
-            make.trailing.equalToSuperview().offset(-20)
-            make.centerY.equalTo(avatarImageView.snp.centerY)
-        }
-
-        leftCollectionView.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview()
-            make.top.equalTo(profileContainerView.snp.bottom).offset(40)
-        }
     }
 }
 

@@ -30,7 +30,7 @@ enum AVPlayerMetaUtils {
 
         if let pic = pic,
            let resource = try? await KingfisherManager.shared.retrieveImage(
-               with: Kingfisher.KF.ImageResource(downloadURL: pic),
+               with: Kingfisher.ImageResource(downloadURL: pic),
                options: [
                    .onlyLoadFirstFrame,
                    .processor(DownsamplingImageProcessor(size: CGSize(width: 640, height: 360))),

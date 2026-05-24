@@ -12,18 +12,18 @@ import UIKit
 class LiveViewController: CategoryViewController {
     override func viewDidLoad() {
         categories = [
+//            CategoryDisplayModel(title: "推荐", contentVC: AreaLiveViewController(areaID: -1)),
             CategoryDisplayModel(title: "关注", contentVC: MyLiveViewController()),
-            CategoryDisplayModel(title: "手游", contentVC: AreaLiveViewController(areaID: 3)),
-            CategoryDisplayModel(title: "推荐", contentVC: AreaLiveViewController(areaID: -1)),
-            CategoryDisplayModel(title: "人气", contentVC: AreaLiveViewController(areaID: 0)),
-            CategoryDisplayModel(title: "娱乐", contentVC: AreaLiveViewController(areaID: 1)),
-            CategoryDisplayModel(title: "虚拟主播", contentVC: AreaLiveViewController(areaID: 9)),
-            CategoryDisplayModel(title: "网游", contentVC: AreaLiveViewController(areaID: 2)),
-            CategoryDisplayModel(title: "单机", contentVC: AreaLiveViewController(areaID: 6)),
-            CategoryDisplayModel(title: "生活", contentVC: AreaLiveViewController(areaID: 10)),
-            CategoryDisplayModel(title: "电台", contentVC: AreaLiveViewController(areaID: 5)),
-            CategoryDisplayModel(title: "知识", contentVC: AreaLiveViewController(areaID: 11)),
-            CategoryDisplayModel(title: "赛事", contentVC: AreaLiveViewController(areaID: 13)),
+//            CategoryDisplayModel(title: "人气", contentVC: AreaLiveViewController(areaID: 0)),
+//            CategoryDisplayModel(title: "娱乐", contentVC: AreaLiveViewController(areaID: 1)),
+//            CategoryDisplayModel(title: "虚拟主播", contentVC: AreaLiveViewController(areaID: 9)),
+//            CategoryDisplayModel(title: "网游", contentVC: AreaLiveViewController(areaID: 2)),
+//            CategoryDisplayModel(title: "手游", contentVC: AreaLiveViewController(areaID: 3)),
+//            CategoryDisplayModel(title: "单机", contentVC: AreaLiveViewController(areaID: 6)),
+//            CategoryDisplayModel(title: "生活", contentVC: AreaLiveViewController(areaID: 10)),
+//            CategoryDisplayModel(title: "电台", contentVC: AreaLiveViewController(areaID: 5)),
+//            CategoryDisplayModel(title: "知识", contentVC: AreaLiveViewController(areaID: 11)),
+//            CategoryDisplayModel(title: "赛事", contentVC: AreaLiveViewController(areaID: 13)),
         ]
         super.viewDidLoad()
     }
@@ -33,7 +33,7 @@ class MyLiveViewController: StandardVideoCollectionViewController<LiveRoom> {
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.styleOverride = .sideBar
-        collectionVC.pageSize = 5
+        collectionVC.pageSize = 10
         reloadInterval = 15 * 60
     }
 
@@ -87,7 +87,6 @@ struct LiveRoom: DisplayData, Codable {
     let title: String
     let room_id: Int
     let uname: String
-    let area_v2_name: String
     let keyframe: String?
     let face: URL?
     let cover_from_user: URL?
@@ -101,12 +100,6 @@ struct LiveRoom: DisplayData, Codable {
     }
 
     var avatar: URL? { face }
-
-    var overlay: DisplayOverlay? {
-        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
-        leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: area_v2_name))
-        return DisplayOverlay(leftItems: leftItems)
-    }
 }
 
 extension LiveRoom: PlayableData {
@@ -162,25 +155,18 @@ struct AreaLiveRoom: DisplayData, Codable, PlayableData {
     let title: String
     let roomid: Int
     let uname: String
-    let system_cover: String
+    let system_cover: URL
     let face: URL?
     let user_cover: URL?
     let parent_name: String
     let area_name: String
-    let area_v2_name: String
     var ownerName: String { uname }
-    var pic: URL? { URL(string: system_cover) }
+    var pic: URL? { system_cover }
     var avatar: URL? { face }
     var cid: Int { 0 }
     var aid: Int { 0 }
 
-    var overlay: DisplayOverlay? {
-        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
-        leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: area_v2_name))
-        return DisplayOverlay(leftItems: leftItems)
-    }
-
     func toLiveRoom() -> LiveRoom {
-        return LiveRoom(title: title, room_id: roomid, uname: uname, area_v2_name: area_v2_name, keyframe: system_cover.isEmpty ? nil : system_cover, face: face, cover_from_user: user_cover)
+        return LiveRoom(title: title, room_id: roomid, uname: uname, keyframe: system_cover.absoluteString, face: face, cover_from_user: user_cover)
     }
 }

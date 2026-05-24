@@ -30,4 +30,10 @@ class ReplyCell: UICollectionViewCell {
             contenLabel.text = replay.content.message
         }
     }
+
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        userNameLabel.textColor = isFocused ? .black : UIColor(named: "label3")
+        contenLabel.textColor = isFocused ? .black : UIColor(named: "label3")
+    }
 }

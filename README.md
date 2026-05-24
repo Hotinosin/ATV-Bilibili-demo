@@ -1,4 +1,4 @@
-# BiliBili tvOS 客户端 Demo
+# BiliBili tvOS 客户端 Demo 由开源（https://github.com/yichengchen/ATV-Bilibili-demo.git）fork：
 
 ### 本项目没有任何授权的 Testflight 发放以及任何收费版本，请注意辨别和考虑安全性问题。
 
@@ -26,9 +26,18 @@
 - HDR播放
 - 字幕
 
- ![](imgs/1.jpg)
- ![](imgs/2.jpg)
+
+###Apple tv+ 风格修改
+##1. 类Apple tv+ 主菜单
+ ![](imgs/1.png)
+##2. 首页关注 可以显示 个人收藏首个目录的封面，可以直接播放
+ ![](imgs/2.png)
+##3. 视频详情页面的布局
  ![](imgs/3.png)
+
+##4. 子菜单显示方式，失焦后自动隐藏
+ ![](imgs/4.png)
+ ![](imgs/5.png)
 
 
 
@@ -36,8 +45,7 @@
  - https://t.me/appletvbilibilidemo
 
 ### 未签名iPA文件
-
-从 https://github.com/yichengchen/ATV-Bilibili-demo/releases/tag/nightly 获取基于最新代码构建的
+  登录Github账号并在GitHub Action 页面 https://github.com/yichengchen/ATV-Bilibili-demo/actions/workflows/build.yml 寻找最新 run 的底部 Artifacts 下载。
 
 ### Links
 

@@ -222,7 +222,6 @@ extension SearchResultViewController: UICollectionViewDelegate {
                 title: data.title,
                 room_id: data.roomid,
                 uname: data.uname,
-                area_v2_name: data.cate_name,
                 keyframe: data.cover?.absoluteString,
                 face: data.uface,
                 cover_from_user: data.user_cover

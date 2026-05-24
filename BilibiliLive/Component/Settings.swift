@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 enum FeedDisplayStyle: Codable, CaseIterable {
+    case big
     case large
     case normal
     case sideBar
@@ -104,6 +105,9 @@ enum Settings {
 
     @UserDefault("Settings.ui.sideMenuAutoSelectChange", defaultValue: false)
     static var sideMenuAutoSelectChange: Bool
+
+    @UserDefault("Settings.showCover", defaultValue: false)
+    static var showCover: Bool
 
     @UserDefaultCodable("Settings.SponsorBlockType", defaultValue: SponsorBlockType.none)
     static var enableSponsorBlock: SponsorBlockType

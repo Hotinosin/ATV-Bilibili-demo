@@ -34,6 +34,7 @@ extension TitleSupplementaryView {
             make.trailing.equalToSuperview()
             make.bottom.equalToSuperview()
         }
-        label.font = UIFont.preferredFont(forTextStyle: .title3)
+        label.textColor = .white
+        label.font = UIFont.preferredFont(forTextStyle: .headline)
     }
 }

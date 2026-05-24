@@ -44,7 +44,11 @@ class RankingViewController: CategoryViewController {
                 }
             }
         super.viewDidLoad()
+        if let vc = currentViewController as? StandardVideoCollectionViewController<VideoDetail.Info> {
+            vc.collectionVC.collectionView.contentInset = UIEdgeInsets(top: 20, left: 0, bottom: 0, right: 0)
+        }
     }
+
 }
 
 class RankingVideoContentViewController: StandardVideoCollectionViewController<VideoDetail.Info> {

@@ -15,6 +15,7 @@ class FollowsViewController: StandardVideoCollectionViewController<DynamicFeedDa
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.pageSize = 1
+        collectionVC.isShowCove = true
     }
 
     override func request(page: Int) async throws -> [DynamicFeedData] {
@@ -24,6 +25,7 @@ class FollowsViewController: StandardVideoCollectionViewController<DynamicFeedDa
         let info = try await WebRequest.requestFollowsFeed(offset: lastOffset, page: page)
         lastOffset = info.offset
         Logger.debug("request page\(page) get count:\(info.videoFeeds.count) next offset:\(info.offset)")
+        collectionVC.headerText = "关注更新"
         return info.videoFeeds
     }
 
@@ -31,6 +33,10 @@ class FollowsViewController: StandardVideoCollectionViewController<DynamicFeedDa
         let epid = feed.modules.module_dynamic.major?.pgc?.epid
         let detailVC = VideoDetailViewController.create(aid: feed.aid, cid: feed.cid, epid: epid)
         detailVC.present(from: self)
+    }
+
+    override func reloadOtherRequest() {
+        collectionVC.reloadData()
     }
 }
 

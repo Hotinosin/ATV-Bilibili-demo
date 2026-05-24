@@ -188,6 +188,7 @@ class FeedCollectionViewController: UIViewController {
     }
 
     func reloadData() {
+        guard isShowTopCover?() ?? false else { return }
         Task {
             try await viewModel.loadFavList()
         }

@@ -234,7 +234,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         let followsViewController = FollowsViewController()
         followsViewController.didSelectToLastLeft = lastLeft
         followsViewController.isShowTopCover = {
-            true
+            false
         }
         followsViewController.isNeedFocusToMenu = {
             true
@@ -247,6 +247,10 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         }
         FeedViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: FeedViewController))
+
+        let historyViewController = HistoryViewController()
+        historyViewController.didSelectToLastLeft = lastLeft
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "clock.fill"), title: "历史记录", contentVC: historyViewController))
 
         let HotViewController = HotViewController()
         HotViewController.isNeedFocusToMenu = {

@@ -11,9 +11,12 @@ import UIKit
 
 class HistoryViewController: UIViewController {
     let collectionVC = FeedCollectionViewController()
+    var didSelectToLastLeft: (() -> Void)?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         collectionVC.show(in: self)
+        collectionVC.didSelectToLastLeft = didSelectToLastLeft
         collectionVC.didSelect = {
             [weak self] in
             self?.goDetail(with: $0 as! HistoryData)

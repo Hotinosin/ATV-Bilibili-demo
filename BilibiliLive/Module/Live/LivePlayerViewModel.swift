@@ -51,19 +51,20 @@ class LivePlayerViewModel {
                 try await initPlayer()
 
                 let danmu = await initDanmu()
-                self.onPluginReady?(danmu)
-
-                let infoPlugin = BVideoInfoPlugin()
-                if let info = await fetchDespInfo() {
-                    infoPlugin.title = info.title
-                    infoPlugin.subTitle = "\(room.ownerName)·\(info.parent_area_name) \(info.area_name)"
-                    infoPlugin.desp = "\(info.description)\nTags:\(info.tags ?? "")"
-                    infoPlugin.pic = room.pic
-                } else {
-                    infoPlugin.title = room.title
-                    infoPlugin.pic = room.pic
+                let linePlugin = LineCandidatesPlugin(candidates: playInfos) { [weak self] url in
+                    self?.playPlugin.play(urlString: url)
                 }
-                self.onPluginReady?([infoPlugin])
+                self.onPluginReady?(danmu + [linePlugin])
+
+                if let info = await fetchDespInfo() {
+                    let subtitle = "\(room.ownerName)·\(info.parent_area_name) \(info.area_name)"
+                    let desp = "\(info.description)\nTags:\(info.tags ?? "")"
+                    let infoPlugin = BVideoInfoPlugin(title: info.title, subTitle: subtitle, desp: desp, pic: room.pic, viewPoints: nil)
+                    self.onPluginReady?([infoPlugin])
+                } else {
+                    let infoPlugin = BVideoInfoPlugin(title: room.title, subTitle: nil, desp: nil, pic: room.pic, viewPoints: nil)
+                    self.onPluginReady?([infoPlugin])
+                }
             } catch let err {
                 await MainActor.run {
                     onError?(String(describing: err))
@@ -138,7 +139,7 @@ class LivePlayerViewModel {
                         let host = url_info.host
                         let extra = url_info.extra
                         let url = "\(host)\(baseUrl)\(extra)"
-                        let playInfo = LivePlayUrlInfo(formate: formate, url: url, current_qn: qn)
+                        let playInfo = LivePlayUrlInfo(formate: formate, url: url, current_qn: qn, codec_name: codec.codecName)
                         allPlayInfos.append(playInfo)
                     }
                 }
@@ -188,6 +189,7 @@ struct LivePlayUrlInfo {
     let formate: String?
     let url: String
     let current_qn: Int?
+    let codec_name: String?
 }
 
 extension WebRequest.EndPoint {

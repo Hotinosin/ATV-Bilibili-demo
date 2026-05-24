@@ -16,6 +16,9 @@
 default_platform(:tvos)
 
 platform :tvos do
+  project_root = File.expand_path("..", __dir__)
+  output_dir = File.join(project_root, "build", "ipa")
+
   desc "Description of what the lane does"
   lane :build_simulator do
     build_app(
@@ -26,21 +29,23 @@ platform :tvos do
   end
 
   lane :build_unsign_ipa do
-    sh "cd /Users/ho/Desktop/ATV-Bilibili-demo && rm -rf Payload *.xcarchive *.ipa *.zip"
+    sh "rm -rf '#{output_dir}' && mkdir -p '#{output_dir}'"
     build_app(
-    destination: "generic/platform=tvOS",
-    configuration: "Release",
-    codesigning_identity:"",
-    skip_codesigning: true,
-    skip_package_ipa: true,
-    archive_path: "BilibiliLive.xcarchive",
+      destination: "generic/platform=tvOS",
+      configuration: "Release",
+      codesigning_identity: "",
+      skip_codesigning: true,
+      skip_package_ipa: true,
+      archive_path: File.join(output_dir, "BilibiliLive.xcarchive"),
     )
-    FastlaneCore::CommandExecutor.execute(command: "cd .. && mv BilibiliLive.xcarchive/Products/Applications ./Payload")
+    FastlaneCore::CommandExecutor.execute(
+      command: "mkdir -p '#{File.join(output_dir, "Payload")}' && cp -R '#{File.join(output_dir, "BilibiliLive.xcarchive", "Products", "Applications")}' '#{File.join(output_dir, "Payload")}'"
+    )
     zip(
-      path: "/Users/ho/Desktop/ATV-Bilibili-demo/Payload",
-      output_path: "/Users/ho/Desktop/ATV-Bilibili-demo/BilbiliAtv"
+      path: File.join(output_dir, "Payload"),
+      output_path: File.join(output_dir, "BilibiliAtv")
     )
-    sh "cd /Users/ho/Desktop/ATV-Bilibili-demo && mv BilbiliAtv.zip BilbiliAtv.ipa"
-    sh "cd /Users/ho/Desktop/ATV-Bilibili-demo && rm -rf Payload *.xcarchive *.zip || true"
+    sh "mv '#{File.join(output_dir, "BilibiliAtv.zip")}' '#{File.join(output_dir, "BilibiliAtv.ipa")}'"
+    sh "rm -rf '#{File.join(output_dir, "Payload")}' '#{File.join(output_dir, "BilibiliLive.xcarchive")}'"
   end
 end

@@ -167,6 +167,15 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
                 }
             }
 
+            SectionModel(title: "沉浸推荐") {
+                Actions(title: "沉浸式视频时长上限", message: "用于筛选沉浸式推荐中的短视频",
+                        current: Settings.featuredDurationLimit.title,
+                        options: FeaturedDurationLimit.allCases,
+                        optionString: FeaturedDurationLimit.allCases.map { $0.title })
+                {
+                    Settings.featuredDurationLimit = $0
+                }
+            }
             SectionModel(title: "进度控制") {
                 Toggle(title: "从上次退出的位置继续播放", setting: Settings.continuePlay, onChange: Settings.continuePlay.toggle())
                 Toggle(title: "自动跳过片头片尾", setting: Settings.autoSkip, onChange: Settings.autoSkip.toggle())

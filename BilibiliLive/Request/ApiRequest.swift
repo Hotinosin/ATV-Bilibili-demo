@@ -270,10 +270,11 @@ enum ApiRequest {
             let cover_left_text_1: String?
             let cover_left_text_2: String?
             let cover_left_text_3: String?
+            let cover_right_text: String?
 
             enum CodingKeys: String, CodingKey {
-                case can_play, title, param, args, player_args, idx, cover, goto, top_rcmd_reason, bottom_rcmd_reason, desc
-                case cover_left_text_1, cover_left_text_2, cover_left_text_3
+                case can_play, title, param, args, idx, cover, goto, top_rcmd_reason, bottom_rcmd_reason, desc, player_args
+                case cover_left_text_1, cover_left_text_2, cover_left_text_3, cover_right_text
                 case avatar_info = "avatar"
             }
 
@@ -302,13 +303,13 @@ enum ApiRequest {
             var overlay: DisplayOverlay? {
                 var leftItems = [DisplayOverlay.DisplayOverlayItem]()
                 var rightItems = [DisplayOverlay.DisplayOverlayItem]()
-                if let text = cover_left_text_2 {
+                if let text = cover_left_text_1 {
                     leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "play.rectangle", text: text))
                 }
-                if let text = cover_left_text_3 {
+                if let text = cover_left_text_2 {
                     leftItems.append(DisplayOverlay.DisplayOverlayItem(icon: "list.bullet.rectangle", text: text))
                 }
-                if let text = cover_left_text_1 {
+                if let text = cover_right_text ?? cover_left_text_3 {
                     rightItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: text))
                 }
                 return DisplayOverlay(leftItems: leftItems, rightItems: rightItems)

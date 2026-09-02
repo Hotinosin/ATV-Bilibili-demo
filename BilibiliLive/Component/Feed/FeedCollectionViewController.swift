@@ -20,7 +20,7 @@ let bigSornerRadius = 45.0
 let EVENT_COLLECTION_TO_TOP = NSNotification.Name("EVENT_COLLECTION_TO_TOP")
 let EVENT_COLLECTION_TO_SHOW_MENU = NSNotification.Name("EVENT_COLLECTION_TO_SHOW_MENU")
 
-protocol DisplayData: Hashable {
+protocol DisplayData: Hashable, AvatarProviding {
     var title: String { get }
     var ownerName: String { get }
     var pic: URL? { get }

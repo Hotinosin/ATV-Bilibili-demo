@@ -11,6 +11,11 @@ import SwiftyJSON
 import UIKit
 
 class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
+    private enum FocusDestination {
+        case menu
+        case content
+    }
+
     static func create() -> MenusViewController {
         return UIStoryboard(name: "Main", bundle: Bundle.main).instantiateViewController(identifier: String(describing: self)) as! MenusViewController
     }
@@ -28,6 +33,8 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     private var menuIsShowing = false
     private var menuRecognizer: UITapGestureRecognizer?
     private var selectMenuItem: CellModel?
+    private let focusToMenuView = FocusToMenuView()
+    private var focusDestination = FocusDestination.menu
 
     @IBOutlet var menusView: UIView! {
         didSet {
@@ -75,6 +82,12 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         leftCollectionView.register(BLMenuLineCollectionViewCell.self, forCellWithReuseIdentifier: "cell")
         leftCollectionView.selectItem(at: IndexPath(row: 0, section: 0), animated: false, scrollPosition: .top)
         collectionView(leftCollectionView, didSelectItemAt: IndexPath(row: 0, section: 0))
+        contentView.addSubview(focusToMenuView)
+        focusToMenuView.snp.makeConstraints { make in
+            make.left.equalToSuperview().offset(33)
+            make.top.bottom.equalToSuperview()
+            make.width.equalTo(1)
+        }
         WebRequest.requestLoginInfo { [weak self] response in
             switch response {
             case let .success(json):
@@ -121,15 +134,13 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     }
 
     @objc func handleRightPress() {
-        hiddenMenus()
+        hiddenMenus(focusContent: true)
     }
     func showMenus() {
         guard !menuIsShowing else { return }
+        focusDestination = .menu
 
         BLAfter(afterTime: 0.1) {
-            self.view.setNeedsFocusUpdate()
-            self.view.updateFocusIfNeeded()
-
             // 先轻微预备动画（让 UI 有呼吸感）
             UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseOut]) {
                 self.menusView.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
@@ -175,12 +186,14 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                         self.usernameLabel.alpha = 1
                     }
                     self.menuIsShowing = true
+                    self.view.setNeedsFocusUpdate()
+                    self.view.updateFocusIfNeeded()
                 }
             }
         }
     }
     
-    func hiddenMenus(isHiddenSubView: Bool = false) {
+    func hiddenMenus(isHiddenSubView: Bool = false, focusContent: Bool = false) {
         UIView.animate(withDuration: 0.4,
                   delay: 0,
                   usingSpringWithDamping: 0.85,
@@ -217,55 +230,50 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
             }
             self.menuIsShowing = false
 
+            if focusContent {
+                self.focusDestination = .content
+                self.contentView.bringSubviewToFront(self.focusToMenuView)
+                self.view.setNeedsFocusUpdate()
+                self.view.updateFocusIfNeeded()
+            }
+
             if let recognizer = self.menuRecognizer {
                 self.view.addGestureRecognizer(recognizer)
             }
         }
     }
 
-    override var preferredFocusedView: UIView? {
-        return leftCollectionView
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        switch focusDestination {
+        case .menu:
+            return [leftCollectionView]
+        case .content:
+            guard let currentViewController else { return [contentView] }
+            let preferred = currentViewController.preferredFocusEnvironments
+            return preferred.isEmpty ? [currentViewController.view] : preferred
+        }
     }
 
     func setupData() {
-        let lastLeft: () -> Void = { [weak self] in
-            self?.showMenus()
-        }
         let followsViewController = FollowsViewController()
-        followsViewController.didSelectToLastLeft = lastLeft
         followsViewController.isShowTopCover = {
             false
-        }
-        followsViewController.isNeedFocusToMenu = {
-            true
         }
         cellModels.append(CellModel(iconImage: UIImage(systemName: "person.crop.circle.badge.checkmark"), title: "关注", contentVC: followsViewController))
 
         let FeedViewController = FeedViewController()
-        FeedViewController.isNeedFocusToMenu = {
-            true
-        }
-        FeedViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: FeedViewController))
 
         let featuredViewController = FeaturedBrowserViewController()
-        featuredViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "play.rectangle.on.rectangle"), title: "沉浸推荐", contentVC: featuredViewController))
 
         let tvRecommendViewController = TVRecommendViewController()
-        tvRecommendViewController.isNeedFocusToMenu = { true }
-        tvRecommendViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "tv"), title: "TV推荐", contentVC: tvRecommendViewController))
 
         let historyViewController = HistoryViewController()
-        historyViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "clock.fill"), title: "历史记录", contentVC: historyViewController))
 
         let HotViewController = HotViewController()
-        HotViewController.isNeedFocusToMenu = {
-            true
-        }
-        HotViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "livephoto.play"), title: "热门", contentVC: HotViewController))
 
         cellModels.append(CellModel(iconImage: UIImage(systemName: "theatermasks.circle"), title: "排行榜", contentVC: RankingViewController()))
@@ -295,9 +303,10 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         contentView.addSubview(vc.view)
         vc.view.makeConstraintsToBindToSuperview()
         vc.didMove(toParent: self)
+        contentView.bringSubviewToFront(focusToMenuView)
 
         BLAfter(afterTime: 0.3) {
-            self.hiddenMenus(isHiddenSubView: true)
+            self.hiddenMenus(isHiddenSubView: true, focusContent: true)
         }
     }
 

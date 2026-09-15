@@ -144,7 +144,11 @@ class VideoPlayerViewModel {
             danmu?.danMuView.playingSpeed = speed.value
         }.store(in: &cancellable)
 
-        let playlist = VideoPlayListPlugin(nextProvider: nextProvider)
+        let collectionEpisodes = collectionEpisodes(from: data.detail)
+        let collectionProvider = makeCollectionProvider(from: collectionEpisodes)
+        let hasCollection = collectionEpisodes.count > 1
+        let playlist = VideoPlayListPlugin(nextProvider: hasCollection ? collectionProvider : nextProvider)
+        playlist.automaticallyPlaysNext = !hasCollection || Settings.continouslyPlay
         playlist.onPlayEnd = { [weak self] in
             self?.onExit?()
         }
@@ -163,6 +167,14 @@ class VideoPlayerViewModel {
 
         // playSpeed 先创建 identifier=setting 的「播放设置」菜单，后续插件（CDN 测速、Debug 等）才能挂进去
         var plugins: [CommonPlayerPlugin] = [playSpeed, playplugin, danmu, upnp, debug, playlist, qualitySelector]
+
+        if collectionEpisodes.count > 1 {
+            let collection = VideoCollectionInfoPlugin(episodes: collectionEpisodes, currentAid: playInfo.aid)
+            collection.onSelect = { [weak self] info in
+                self?.playNext(newPlayInfo: info)
+            }
+            plugins.append(collection)
+        }
 
         if let clips = data.clips {
             let clip = BVideoClipsPlugin(clipInfos: clips)
@@ -204,6 +216,27 @@ class VideoPlayerViewModel {
         }
 
         return plugins
+    }
+
+    private func collectionEpisodes(from detail: VideoDetail?) -> [VideoDetail.Info.UgcSeason.UgcVideoInfo] {
+        guard let season = detail?.View.ugc_season else { return [] }
+        let episodes: [VideoDetail.Info.UgcSeason.UgcVideoInfo]
+        if season.sections.count > 1 {
+            episodes = season.sections.first(where: { section in
+                section.episodes.contains(where: { $0.aid == playInfo.aid })
+            })?.episodes ?? []
+        } else {
+            episodes = season.sections.first?.episodes ?? []
+        }
+        return episodes.sorted { $0.arc.ctime < $1.arc.ctime }
+    }
+
+    private func makeCollectionProvider(from episodes: [VideoDetail.Info.UgcSeason.UgcVideoInfo]) -> VideoNextProvider? {
+        guard let index = episodes.firstIndex(where: { $0.aid == playInfo.aid }) else { return nil }
+        let sequence = episodes.dropFirst(index).map {
+            PlayInfo(aid: $0.aid, cid: $0.cid, title: $0.title)
+        }
+        return sequence.count > 1 ? VideoNextProvider(seq: Array(sequence)) : nil
     }
 }
 

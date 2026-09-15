@@ -12,6 +12,7 @@ class VideoPlayListPlugin: NSObject, CommonPlayerPlugin {
     private weak var playerVC: AVPlayerViewController?
     var onPlayEnd: (() -> Void)?
     var onPlayNextWithInfo: ((PlayInfo) -> Void)?
+    var automaticallyPlaysNext = true
 
     let nextProvider: VideoNextProvider?
 
@@ -66,6 +67,10 @@ class VideoPlayListPlugin: NSObject, CommonPlayerPlugin {
     }
 
     func playerDidEnd(player: AVPlayer) {
+        guard automaticallyPlaysNext else {
+            onPlayEnd?()
+            return
+        }
         if !playNext() {
             if Settings.loopPlay {
                 nextProvider?.reset()

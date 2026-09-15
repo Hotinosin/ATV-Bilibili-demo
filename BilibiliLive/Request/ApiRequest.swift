@@ -260,6 +260,7 @@ enum ApiRequest {
             let param: String
             let args: Args
             let avatar_info: Avatar
+            let player_args: PlayerArgs?
             let idx: Int
             let cover: String
             let goto: String
@@ -271,7 +272,7 @@ enum ApiRequest {
             let cover_left_text_3: String?
 
             enum CodingKeys: String, CodingKey {
-                case can_play, title, param, args, idx, cover, goto, top_rcmd_reason, bottom_rcmd_reason, desc
+                case can_play, title, param, args, player_args, idx, cover, goto, top_rcmd_reason, bottom_rcmd_reason, desc
                 case cover_left_text_1, cover_left_text_2, cover_left_text_3
                 case avatar_info = "avatar"
             }
@@ -321,6 +322,35 @@ enum ApiRequest {
 
         struct Avatar: Codable, Hashable {
             let cover: String?
+        }
+
+        struct PlayerArgs: Codable, Hashable {
+            let aid: Int?
+            let cid: Int?
+            let duration: Int?
+            let type: String?
+
+            enum CodingKeys: String, CodingKey {
+                case aid, cid, duration, type
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                aid = Self.decodeInt(forKey: .aid, from: container)
+                cid = Self.decodeInt(forKey: .cid, from: container)
+                duration = Self.decodeInt(forKey: .duration, from: container)
+                type = try? container.decodeIfPresent(String.self, forKey: .type)
+            }
+
+            private static func decodeInt(forKey key: CodingKeys, from container: KeyedDecodingContainer<CodingKeys>) -> Int? {
+                if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
+                    return value
+                }
+                if let value = try? container.decodeIfPresent(String.self, forKey: key) {
+                    return Int(value)
+                }
+                return nil
+            }
         }
     }
 

@@ -39,8 +39,9 @@ platform :tvos do
       archive_path: File.join(output_dir, "BilibiliLive.xcarchive"),
     )
     FastlaneCore::CommandExecutor.execute(
-      command: "mkdir -p '#{File.join(output_dir, "Payload")}' && cp -R '#{File.join(output_dir, "BilibiliLive.xcarchive", "Products", "Applications")}' '#{File.join(output_dir, "Payload")}'"
+      command: "mkdir -p '#{File.join(output_dir, "Payload")}' && cp -R '#{File.join(output_dir, "BilibiliLive.xcarchive", "Products", "Applications", ".")}' '#{File.join(output_dir, "Payload")}'"
     )
+    sh "test -f '#{File.join(output_dir, "Payload", "BilibiliLive.app", "Info.plist")}'"
     zip(
       path: File.join(output_dir, "Payload"),
       output_path: File.join(output_dir, "BilibiliAtv")

@@ -248,6 +248,10 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         FeedViewController.didSelectToLastLeft = lastLeft
         cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: FeedViewController))
 
+        let featuredViewController = FeaturedBrowserViewController()
+        featuredViewController.didSelectToLastLeft = lastLeft
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "play.rectangle.on.rectangle"), title: "沉浸推荐", contentVC: featuredViewController))
+
         let tvRecommendViewController = TVRecommendViewController()
         tvRecommendViewController.isNeedFocusToMenu = { true }
         tvRecommendViewController.didSelectToLastLeft = lastLeft

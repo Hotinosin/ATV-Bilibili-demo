@@ -14,7 +14,7 @@ class TabBarPageVCFactory {
         case .live:
             vc = LiveViewController()
         case .feed:
-            vc = RecommendViewController()
+            vc = FeedViewController()
         case .hot:
             vc = HotViewController()
         case .ranking:

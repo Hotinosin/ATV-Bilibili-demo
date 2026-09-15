@@ -9,6 +9,7 @@ import SnapKit
 import UIKit
 
 class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol {
+    var didSelectToLastLeft: (() -> Void)?
     private let preloadDelayNs: UInt64 = 1_000_000_000
     private let dataSource: FeedFlowDataSource
 
@@ -158,7 +159,14 @@ class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol
             await self?.loadMoreItemsIfNeeded(targetCount: self?.dataSource.trailingPrefetchTargetCount ?? 8,
                                               maxSourcePages: self?.dataSource.trailingMaxSourcePages ?? 3)
         }
+        let leftPress = UITapGestureRecognizer(target: self, action: #selector(handleLeftPress))
+        leftPress.allowedPressTypes = [NSNumber(value: UIPress.PressType.leftArrow.rawValue)]
+        view.addGestureRecognizer(leftPress)
         reloadData()
+    }
+
+    @objc private func handleLeftPress() {
+        didSelectToLastLeft?()
     }
 
     deinit {

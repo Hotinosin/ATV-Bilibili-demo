@@ -320,7 +320,10 @@ class VideoDetailViewController: UIViewController {
     }
 
     private func setupPageRangeCollectionView() {
-        let titleLabel = pageView.subviews.compactMap { $0 as? UILabel }.first { $0.text == "视频选集" }!
+        guard let titleLabel = pageView.subviews.compactMap({ $0 as? UILabel }).first else { return }
+        if titleLabel.text?.isEmpty != false {
+            titleLabel.text = "视频选集"
+        }
 
         pageView.addSubview(pageRangeCollectionView)
 

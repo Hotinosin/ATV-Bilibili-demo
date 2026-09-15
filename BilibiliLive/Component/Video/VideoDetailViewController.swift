@@ -119,8 +119,6 @@ class VideoDetailViewController: UIViewController {
     @IBOutlet var ugcLabel: UILabel!
     @IBOutlet var ugcView: UIView!
 
-    private var loadingView = UIActivityIndicatorView()
-
     private var pageCollectionViewTopToTitleConstraint: Constraint?
     private var pageCollectionViewTopToRangeConstraint: Constraint?
     private let pageRangeSize = 20

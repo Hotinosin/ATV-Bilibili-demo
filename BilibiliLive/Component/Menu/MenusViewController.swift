@@ -109,20 +109,13 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         menuRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleMenuPress))
         menuRecognizer?.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
         view.addGestureRecognizer(menuRecognizer!)
-        BLAfter(afterTime: 2) {
-            self.view.addSubview(self.menusView)
-            self.hiddenMenus(isHiddenSubView: true)
-
-            self.menusView.snp.makeConstraints { make in
-                make.top.left.equalTo(30)
-            }
-            BLAfter(afterTime: 1) {
-                BLAnimate(withDuration: 0.4) {
-                    self.menusView.alpha = 1
-                    self.homeIcon.alpha = 1
-                }
-            }
+        view.addSubview(menusView)
+        menusView.snp.makeConstraints { make in
+            make.top.left.equalTo(30)
         }
+        menusView.alpha = 1
+        homeIcon.alpha = 1
+        hiddenMenus()
     }
 
     override func viewDidAppear(_ animated: Bool) {

@@ -26,6 +26,10 @@ final class VideoCollectionInfoPlugin: NSObject, CommonPlayerPlugin {
         removeInfoViewController()
     }
 
+    func playerWillCleanUp(playerVC: AVPlayerViewController) {
+        removeInfoViewController()
+    }
+
     func playerDidDismiss(playerVC: AVPlayerViewController) {
         removeInfoViewController()
     }

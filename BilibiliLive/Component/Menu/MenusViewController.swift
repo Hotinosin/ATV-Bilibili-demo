@@ -45,8 +45,12 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
 
             } else {
                 menusView.setBlurEffectView(cornerRadius: lessBigSornerRadius)
-                menusView.setCornerRadius(cornerRadius: lessBigSornerRadius, borderColor: .lightGray, borderWidth: 0.5)
+                menusView.layer.borderColor = UIColor.lightGray.cgColor
+                menusView.layer.borderWidth = 0.5
             }
+            menusView.layer.shadowColor = UIColor.black.cgColor
+            menusView.layer.shadowOffset = .zero
+            updateMenuCornerRadius(lessBigSornerRadius)
             menusView.alpha = 0
             menusView.removeFromSuperview()
         }
@@ -156,7 +160,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                     self.headViewLeading.constant = 20
                     self.headingViewTop.constant = 20
                     self.menuViewWidth.constant = 320
-                    self.menusView.setCornerRadius(cornerRadius: bigSornerRadius)
+                    self.updateMenuCornerRadius(bigSornerRadius)
 
                     // 阴影更柔和
                     self.menusView.layer.shadowOpacity = 0.3
@@ -200,7 +204,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
             self.headViewLeading.constant = 5
             self.headingViewTop.constant = 5
             self.menuViewWidth.constant = 180
-            self.menusView.setCornerRadius(cornerRadius: 30)
+            self.updateMenuCornerRadius(30)
 
             // 模糊阴影逐渐减弱
             self.menusView.layer.shadowOpacity = 0.1
@@ -244,6 +248,14 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
             guard let currentViewController else { return [contentView] }
             let preferred = currentViewController.preferredFocusEnvironments
             return preferred.isEmpty ? [currentViewController.view] : preferred
+        }
+    }
+
+    private func updateMenuCornerRadius(_ radius: CGFloat) {
+        menusView.layer.cornerRadius = radius
+        menusView.layer.masksToBounds = false
+        if #available(tvOS 26.0, *) {
+            menusView.subviews.compactMap { $0 as? UIVisualEffectView }.first?.cornerConfiguration = .corners(radius: .fixed(radius))
         }
     }
 

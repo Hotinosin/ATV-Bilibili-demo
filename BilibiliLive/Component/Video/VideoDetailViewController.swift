@@ -608,7 +608,6 @@ class VideoDetailViewController: UIViewController {
             } else {
                 allUgcEpisodes = season.sections.first?.episodes ?? []
             }
-            allUgcEpisodes.sort { $0.arc.ctime < $1.arc.ctime }
         }
 
         ugcCollectionView.reloadData()

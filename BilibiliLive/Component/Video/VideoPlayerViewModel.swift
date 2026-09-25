@@ -412,7 +412,7 @@ class VideoPlayerViewModel {
         } else {
             episodes = season.sections.first?.episodes ?? []
         }
-        return episodes.sorted { $0.arc.ctime < $1.arc.ctime }
+        return episodes
     }
 
     @MainActor private func makeCollectionProvider(from episodes: [VideoDetail.Info.UgcSeason.UgcVideoInfo]) -> VideoSequenceProvider? {

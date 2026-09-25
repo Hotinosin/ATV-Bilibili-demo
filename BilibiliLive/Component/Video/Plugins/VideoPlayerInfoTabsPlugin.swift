@@ -279,7 +279,6 @@ private final class VideoPlayerTextInfoViewController: UIViewController {
         textView.font = .systemFont(ofSize: 28)
         textView.textColor = .white
         textView.text = text.isEmpty ? "暂无简介" : text
-        textView.isEditable = false
         view.addSubview(textView)
         textView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([

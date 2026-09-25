@@ -13,8 +13,11 @@ class ReplyCell: UICollectionViewCell {
     @IBOutlet var avatarImageView: UIImageView!
     @IBOutlet var userNameLabel: UILabel!
     @IBOutlet var contenLabel: UILabel!
+    private var reply: Replys.Reply?
+    private var baseAttributedText: NSAttributedString?
 
     func config(replay: Replys.Reply) {
+        reply = replay
         avatarImageView.kf.setImage(
             with: URL(string: replay.member.avatar),
             options: [
@@ -24,16 +27,27 @@ class ReplyCell: UICollectionViewCell {
             ]
         )
         userNameLabel.text = replay.member.uname
-        if let attr = replay.createAttributedString(displayView: contenLabel) {
-            contenLabel.attributedText = attr
-        } else {
-            contenLabel.text = replay.content.message
-        }
+        contenLabel.textAlignment = .left
+        baseAttributedText = replay.createAttributedString(displayView: contenLabel)
+        updateAppearance()
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
-        userNameLabel.textColor = isFocused ? .black : UIColor(named: "label3")
-        contenLabel.textColor = isFocused ? .black : UIColor(named: "label3")
+        updateAppearance()
+    }
+
+    private func updateAppearance() {
+        guard let reply else { return }
+        let color: UIColor = isFocused ? .black : .white
+        userNameLabel.textColor = color
+        if let attributedText = baseAttributedText?.mutableCopy() as? NSMutableAttributedString {
+            attributedText.addAttribute(.foregroundColor, value: color, range: NSRange(location: 0, length: attributedText.length))
+            contenLabel.attributedText = attributedText
+        } else {
+            contenLabel.attributedText = nil
+            contenLabel.text = reply.content.message
+            contenLabel.textColor = color
+        }
     }
 }

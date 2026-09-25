@@ -741,10 +741,10 @@
                                                                                     </tvCardView>
                                                                                 </subviews>
                                                                                 <constraints>
-                                                                                    <constraint firstAttribute="bottom" secondItem="q7F-CH-d8W" secondAttribute="bottom" constant="44" id="Wbq-5f-vRx"/>
+                                                                                    <constraint firstAttribute="bottom" secondItem="q7F-CH-d8W" secondAttribute="bottom" constant="12" id="Wbq-5f-vRx"/>
                                                                                     <constraint firstItem="q7F-CH-d8W" firstAttribute="leading" secondItem="eLd-ep-UX7" secondAttribute="leading" constant="55" id="mnY-0s-rEJ"/>
                                                                                     <constraint firstAttribute="trailing" secondItem="q7F-CH-d8W" secondAttribute="trailing" constant="55" id="uZJ-t1-psg"/>
-                                                                                    <constraint firstItem="q7F-CH-d8W" firstAttribute="top" secondItem="eLd-ep-UX7" secondAttribute="top" constant="44" id="xUP-2c-jqQ"/>
+                                                                                    <constraint firstItem="q7F-CH-d8W" firstAttribute="top" secondItem="eLd-ep-UX7" secondAttribute="top" constant="12" id="xUP-2c-jqQ"/>
                                                                                 </constraints>
                                                                             </collectionViewCellContentView>
                                                                             <connections>

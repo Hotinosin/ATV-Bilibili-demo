@@ -209,6 +209,7 @@ class VideoDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        titleLabel.font = UIFont(name: "PingFangSC-Semibold", size: 40) ?? .systemFont(ofSize: 40, weight: .semibold)
         pageCollectionView.register(BLTextOnlyCollectionViewCell.self, forCellWithReuseIdentifier: String(describing: BLTextOnlyCollectionViewCell.self))
         pageCollectionView.collectionViewLayout = makePageCollectionViewLayout()
         pageCollectionView.clipsToBounds = false
@@ -925,13 +926,13 @@ extension VideoDetailViewController {
 
     func makeReplyCollectionViewLayout() -> UICollectionViewLayout {
         let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                            heightDimension: .fractionalHeight(1)))
+                                                            heightDimension: .estimated(180)))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                       heightDimension: .absolute(240)),
+                                                                       heightDimension: .estimated(180)),
                                                        subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = .init(top: 8, leading: 100, bottom: 8, trailing: 100)
-        section.interGroupSpacing = 8
+        section.contentInsets = .init(top: 0, leading: 100, bottom: 0, trailing: 100)
+        section.interGroupSpacing = 2
         return UICollectionViewCompositionalLayout(section: section)
     }
 }

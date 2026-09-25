@@ -88,6 +88,14 @@ private final class VideoCollectionInfoViewController: UIViewController {
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard let index = episodes.firstIndex(where: { $0.aid == currentAid }) else { return }
+        collectionView.scrollToItem(at: IndexPath(item: index, section: 0), at: .centeredHorizontally, animated: false)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
 }
 
 extension VideoCollectionInfoViewController: UICollectionViewDataSource, UICollectionViewDelegate {
@@ -99,8 +107,9 @@ extension VideoCollectionInfoViewController: UICollectionViewDataSource, UIColle
         let episode = episodes[indexPath.item]
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self),
                                                       for: indexPath) as! RelatedVideoCell
+        cell.imageView.adjustsImageWhenAncestorFocused = false
         cell.update(data: episode)
-        cell.alpha = episode.aid == currentAid ? 0.55 : 1
+        cell.alpha = 1
         return cell
     }
 
@@ -108,5 +117,10 @@ extension VideoCollectionInfoViewController: UICollectionViewDataSource, UIColle
         let episode = episodes[indexPath.item]
         guard episode.aid != currentAid else { return }
         onSelect?(PlayInfo(aid: episode.aid, cid: episode.cid, title: episode.title))
+    }
+
+    func indexPathForPreferredFocusedView(in collectionView: UICollectionView) -> IndexPath? {
+        guard let index = episodes.firstIndex(where: { $0.aid == currentAid }) else { return nil }
+        return IndexPath(item: index, section: 0)
     }
 }

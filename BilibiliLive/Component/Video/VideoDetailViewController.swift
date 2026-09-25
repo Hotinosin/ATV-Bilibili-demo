@@ -217,6 +217,7 @@ class VideoDetailViewController: UIViewController {
         ugcCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         recommandCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
         ugcCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
+        replysCollectionView.collectionViewLayout = makeReplyCollectionViewLayout()
         noteView.onPrimaryAction = {
             [weak self] note in
             let detail = ContentDetailViewController.createDesp(content: note.label.text ?? "")
@@ -921,6 +922,18 @@ extension VideoDetailViewController {
             section.interGroupSpacing = 40
             return section
         }
+    }
+
+    func makeReplyCollectionViewLayout() -> UICollectionViewLayout {
+        let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                            heightDimension: .fractionalHeight(1)))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                                       heightDimension: .absolute(240)),
+                                                       subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = .init(top: 8, leading: 100, bottom: 8, trailing: 100)
+        section.interGroupSpacing = 8
+        return UICollectionViewCompositionalLayout(section: section)
     }
 }
 

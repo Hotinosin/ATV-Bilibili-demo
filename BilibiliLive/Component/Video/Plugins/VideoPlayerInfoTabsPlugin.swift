@@ -40,6 +40,8 @@ final class VideoPlayerInfoTabsPlugin: NSObject, CommonPlayerPlugin {
                                                                                     emptyText: DiscoverySource.uploader.emptyText)
     private let relatedInfoViewController = VideoPlayerDiscoveryInfoViewController(title: DiscoverySource.related.tabTitle,
                                                                                    emptyText: DiscoverySource.related.emptyText)
+    private let commentsInfoViewController: VideoPlayerCommentsInfoViewController
+    private let descriptionInfoViewController: VideoPlayerTextInfoViewController
     private let actionInfoViewController: VideoPlayerActionInfoViewController
     private let relatedCandidates: [PlayInfo]
     private let ownerMid: Int
@@ -52,6 +54,8 @@ final class VideoPlayerInfoTabsPlugin: NSObject, CommonPlayerPlugin {
         self.sequenceProvider = sequenceProvider
         ownerMid = detail?.View.owner.mid ?? 0
         relatedCandidates = Self.makeRelatedEntries(detail: detail, currentPlayInfo: currentPlayInfo)
+        commentsInfoViewController = VideoPlayerCommentsInfoViewController(aid: detail?.View.aid ?? currentPlayInfo.aid)
+        descriptionInfoViewController = VideoPlayerTextInfoViewController(title: "简介", text: detail?.View.desc ?? "")
         actionInfoViewController = VideoPlayerActionInfoViewController(detail: detail)
         super.init()
 
@@ -145,21 +149,27 @@ final class VideoPlayerInfoTabsPlugin: NSObject, CommonPlayerPlugin {
     private func refreshCustomInfoViewControllers() {
         guard let playerVC else { return }
         var controllers = playerVC.customInfoViewControllers.filter {
-            $0 !== uploaderInfoViewController &&
+            $0 !== commentsInfoViewController &&
+                $0 !== uploaderInfoViewController &&
                 $0 !== relatedInfoViewController &&
+                $0 !== descriptionInfoViewController &&
                 $0 !== actionInfoViewController
         }
+        controllers.append(commentsInfoViewController)
         controllers.append(uploaderInfoViewController)
         controllers.append(relatedInfoViewController)
+        controllers.append(descriptionInfoViewController)
         controllers.append(actionInfoViewController)
-        playerVC.customInfoViewControllers = controllers
+        playerVC.customInfoViewControllers = sortedVideoInfoControllers(controllers)
     }
 
     private func removeCustomInfoViewControllers() {
         guard let playerVC else { return }
         playerVC.customInfoViewControllers.removeAll {
-            $0 === uploaderInfoViewController ||
+            $0 === commentsInfoViewController ||
+                $0 === uploaderInfoViewController ||
                 $0 === relatedInfoViewController ||
+                $0 === descriptionInfoViewController ||
                 $0 === actionInfoViewController
         }
     }
@@ -181,5 +191,102 @@ final class VideoPlayerInfoTabsPlugin: NSObject, CommonPlayerPlugin {
                             ownerName: info.ownerName,
                             coverURL: info.pic)
         }
+    }
+}
+
+func sortedVideoInfoControllers(_ controllers: [UIViewController]) -> [UIViewController] {
+    let order = ["评论", "合集", "相关视频", "博主视频", "简介", "互动"]
+    return controllers.sorted {
+        (order.firstIndex(of: $0.title ?? "") ?? order.count) <
+            (order.firstIndex(of: $1.title ?? "") ?? order.count)
+    }
+}
+
+private final class VideoPlayerCommentsInfoViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate {
+    private var replies = [Replys.Reply]()
+    private lazy var collectionView: UICollectionView = {
+        let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                            heightDimension: .fractionalHeight(1)))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                                       heightDimension: .absolute(220)),
+                                                       subitems: [item])
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = .init(top: 12, leading: 48, bottom: 12, trailing: 48)
+        section.interGroupSpacing = 8
+        let view = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout(section: section))
+        view.backgroundColor = .clear
+        view.dataSource = self
+        view.delegate = self
+        view.register(UINib(nibName: ReplyCell.identifier, bundle: nil), forCellWithReuseIdentifier: ReplyCell.identifier)
+        return view
+    }()
+
+    init(aid: Int) {
+        super.init(nibName: nil, bundle: nil)
+        title = "评论"
+        WebRequest.requestReplys(aid: aid) { [weak self] result in
+            self?.replies = result.replies ?? []
+            self?.collectionView.reloadData()
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        preferredContentSize = CGSize(width: 0, height: 520)
+        view.addSubview(collectionView)
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { replies.count }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ReplyCell.identifier, for: indexPath) as! ReplyCell
+        cell.config(replay: replies[indexPath.item])
+        return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        present(ReplyDetailViewController(reply: replies[indexPath.item]), animated: true)
+    }
+}
+
+private final class VideoPlayerTextInfoViewController: UIViewController {
+    private let text: String
+
+    init(title: String, text: String) {
+        self.text = text
+        super.init(nibName: nil, bundle: nil)
+        self.title = title
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        preferredContentSize = CGSize(width: 0, height: 420)
+        let textView = UITextView()
+        textView.backgroundColor = .clear
+        textView.font = .systemFont(ofSize: 28)
+        textView.textColor = .white
+        textView.text = text.isEmpty ? "暂无简介" : text
+        textView.isEditable = false
+        view.addSubview(textView)
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 48),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -48),
+            textView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+        ])
     }
 }

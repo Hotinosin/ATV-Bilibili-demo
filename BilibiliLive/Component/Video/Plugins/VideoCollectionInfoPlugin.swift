@@ -19,7 +19,7 @@ final class VideoCollectionInfoPlugin: NSObject, CommonPlayerPlugin {
         self.playerVC = playerVC
         var controllers = playerVC.customInfoViewControllers.filter { $0.title != "合集" }
         controllers.append(infoViewController)
-        playerVC.customInfoViewControllers = controllers
+        playerVC.customInfoViewControllers = sortedVideoInfoControllers(controllers)
     }
 
     func playerDidCleanUp(player: AVPlayer) {

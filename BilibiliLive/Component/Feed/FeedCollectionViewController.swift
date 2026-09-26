@@ -108,6 +108,7 @@ class FeedCollectionViewController: UIViewController {
     private var coverViewIsShowing = false
 
     var styleOverride: FeedDisplayStyle?
+    var reservesSidebarSpace = false
     var didSelect: ((any DisplayData) -> Void)?
     var didLongPress: ((any DisplayData) -> Void)?
     var loadMore: (() -> Void)?
@@ -320,7 +321,7 @@ class FeedCollectionViewController: UIViewController {
         ), repeatingSubitem: item, count: style.feedColCount)
 
         let vSpacing: CGFloat = style == .large ? 34 : 26
-        let baseSpacing: CGFloat = style == .sideBar ? 34 : 0
+        let baseSpacing: CGFloat = reservesSidebarSpace ? 34 : 0
 
         group.edgeSpacing = NSCollectionLayoutEdgeSpacing(leading: .fixed(baseSpacing), top: .fixed(vSpacing), trailing: .fixed(0), bottom: .fixed(vSpacing))
 

@@ -32,7 +32,6 @@ class BangumiListViewController: StandardVideoCollectionViewController<FollowBan
 
     override func setupCollectionView() {
         super.setupCollectionView()
-        collectionVC.styleOverride = .normal
         collectionVC.pageSize = 24
         collectionVC.loadViewIfNeeded()
         collectionVC.collectionView.contentInset = UIEdgeInsets(top: 40, left: 0, bottom: 40, right: 0)

@@ -267,9 +267,9 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         cellModels.append(CellModel(iconImage: UIImage(systemName: "person.crop.circle.badge.checkmark"), title: "关注", contentVC: followsViewController))
 
         let feedViewController = FeedViewController()
-        feedViewController.collectionVC.styleOverride = .sideBar
+        feedViewController.collectionVC.reservesSidebarSpace = true
         let tvRecommendViewController = TVRecommendViewController()
-        tvRecommendViewController.collectionVC.styleOverride = .sideBar
+        tvRecommendViewController.collectionVC.reservesSidebarSpace = true
         let recommendationViewController = CategoryViewController()
         recommendationViewController.contentExtendsUnderTopSafeArea = true
         recommendationViewController.categories = [

@@ -10,7 +10,7 @@ import UIKit
 class BLMenuLineCollectionViewCell: BLSettingLineCollectionViewCell {
     var iconImageView = UIImageView()
     override func addsubViews() {
-        selectedWhiteView.layer.cornerRadius = lessBigSornerRadius
+        selectedWhiteView.layer.cornerRadius = moreLittleSornerRadius
         selectedWhiteView.layer.cornerCurve = .continuous
         selectedWhiteView.backgroundColor = UIColor(named: "menuCellColor")
         selectedWhiteView.isHidden = !isFocused

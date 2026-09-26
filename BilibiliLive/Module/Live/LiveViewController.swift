@@ -41,7 +41,7 @@ class AreaLiveViewController: StandardVideoCollectionViewController<AreaLiveRoom
 
     override func setupCollectionView() {
         super.setupCollectionView()
-        collectionVC.styleOverride = .sideBar
+        collectionVC.reservesSidebarSpace = true
         collectionVC.pageSize = 10
         reloadInterval = 15 * 60
     }

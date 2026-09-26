@@ -65,7 +65,7 @@ class RankingVideoContentViewController: StandardVideoCollectionViewController<V
     }
 
     override func setupCollectionView() {
-        collectionVC.styleOverride = .sideBar
+        collectionVC.reservesSidebarSpace = true
         super.setupCollectionView()
     }
 
@@ -91,7 +91,7 @@ class RankingSeasonContentViewController: StandardVideoCollectionViewController<
     }
 
     override func setupCollectionView() {
-        collectionVC.styleOverride = .sideBar
+        collectionVC.reservesSidebarSpace = true
         super.setupCollectionView()
     }
 

@@ -23,7 +23,7 @@ class ReplyCell: BLMotionCollectionViewCell {
     private var baseAttributedText: NSAttributedString?
 
     func config(replay: Replys.Reply) {
-        scaleFactor = 1.04
+        scaleFactor = compactFocusScale
         reply = replay
         avatarImageView.kf.setImage(
             with: URL(string: replay.member.avatar),
@@ -71,7 +71,7 @@ final class CompactReplyCell: BLMotionCollectionViewCell {
 
     override func setup() {
         super.setup()
-        scaleFactor = 1.03
+        scaleFactor = compactFocusScale
         if #available(tvOS 26.0, *) {
             glassEffect = UIGlassEffect(style: .clear)
         } else {

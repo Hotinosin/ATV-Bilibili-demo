@@ -358,7 +358,7 @@ class SettingsSwitchCell: BLMotionCollectionViewCell {
     func setupView() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(descLabel)
-        scaleFactor = 1.04
+        scaleFactor = compactFocusScale
         contentView.layer.cornerRadius = moreLittleSornerRadius
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true

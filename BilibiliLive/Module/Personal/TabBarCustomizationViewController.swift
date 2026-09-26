@@ -420,10 +420,10 @@ class TabBarTileCell: BLMotionCollectionViewCell {
     }
 
     private func setupView() {
-        contentView.layer.cornerRadius = 16
+        contentView.layer.cornerRadius = moreLittleSornerRadius
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true
-        contentView.setAutoGlassEffectView(cornerRadius: 16)
+        contentView.setAutoGlassEffectView(cornerRadius: moreLittleSornerRadius)
 
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOffset = CGSize(width: 0, height: 8)

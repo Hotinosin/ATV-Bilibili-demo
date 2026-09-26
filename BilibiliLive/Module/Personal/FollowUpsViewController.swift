@@ -120,6 +120,11 @@ class UpCell: BLMotionCollectionViewCell {
 
     override func setup() {
         super.setup()
+        scaleFactor = standardFocusScale
+        contentView.layer.cornerRadius = normailSornerRadius
+        contentView.layer.cornerCurve = .continuous
+        contentView.clipsToBounds = true
+        contentView.setAutoGlassEffectView(cornerRadius: normailSornerRadius)
         contentView.addSubview(imageView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(despLabel)
@@ -148,17 +153,23 @@ class UpCell: BLMotionCollectionViewCell {
         nameLabel.fadeLength = 60
         despLabel.font = UIFont.systemFont(ofSize: 20, weight: .regular)
         despLabel.textColor = UIColor(named: "titleColor")
-        contentView.backgroundColor = UIColor(named: "bgColor")
-        contentView.layer.cornerRadius = normailSornerRadius
+        updateAppearance()
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
+        coordinator.addCoordinatedAnimations { self.updateAppearance() }
         if isFocused {
             startScroll()
         } else {
             stopScroll()
         }
+    }
+
+    private func updateAppearance() {
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.06)
+        nameLabel.textColor = .white
+        despLabel.textColor = UIColor.white.withAlphaComponent(0.75)
     }
 
     private func startScroll() {

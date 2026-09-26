@@ -249,7 +249,7 @@ class BLButton: UIControl {
         super.didUpdateFocus(in: context, with: coordinator)
         if isFocused {
             selectedWhiteView.isHidden = false
-            let scale = 1.04
+            let scale = compactFocusScale
             coordinator.addCoordinatedAnimations {
                 self.transform = CGAffineTransformMakeScale(scale, scale)
                 let scaleDiff = (self.bounds.size.height * scale - self.bounds.size.height) / 2
@@ -270,7 +270,7 @@ class BLButton: UIControl {
         }
     }
     
-    func setTansform(x sx: CGFloat?=1.1, y sy: CGFloat?=1.1){
+    func setTansform(x sx: CGFloat? = prominentFocusScale, y sy: CGFloat? = prominentFocusScale) {
         self.alpha = 0
         self.transform = CGAffineTransform(translationX: 0, y: 0).scaledBy(x: sx!, y: sy!)
     }

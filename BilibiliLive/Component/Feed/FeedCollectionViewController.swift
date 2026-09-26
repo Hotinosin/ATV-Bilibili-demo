@@ -16,6 +16,9 @@ let moreLittleSornerRadius = 18.0
 let normailSornerRadius = 25.0
 let lessBigSornerRadius = 35.0
 let bigSornerRadius = 45.0
+let compactFocusScale = 1.04
+let standardFocusScale = 1.06
+let prominentFocusScale = 1.08
 
 let EVENT_COLLECTION_TO_TOP = NSNotification.Name("EVENT_COLLECTION_TO_TOP")
 let EVENT_COLLECTION_TO_SHOW_MENU = NSNotification.Name("EVENT_COLLECTION_TO_SHOW_MENU")

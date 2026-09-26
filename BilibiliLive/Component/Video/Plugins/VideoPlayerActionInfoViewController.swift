@@ -26,7 +26,7 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
 
     override func setup() {
         super.setup()
-        scaleFactor = 1.08
+        scaleFactor = prominentFocusScale
         if #available(tvOS 26.0, *) {
             blurView.effect = UIGlassEffect(style: .clear)
         } else {
@@ -34,7 +34,7 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
         }
         contentView.addSubview(blurView)
         blurView.translatesAutoresizingMaskIntoConstraints = false
-        blurView.layer.cornerRadius = 18
+        blurView.layer.cornerRadius = moreLittleSornerRadius
         blurView.layer.cornerCurve = .continuous
         blurView.clipsToBounds = true
 

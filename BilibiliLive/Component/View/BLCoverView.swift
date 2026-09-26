@@ -12,7 +12,7 @@ class BLCoverView: UIView {
 
     @IBOutlet var coverImageView: UIImageView! {
         didSet {
-            coverImageView.setCornerRadius(cornerRadius: 40)
+            coverImageView.setCornerRadius(cornerRadius: lessBigSornerRadius)
         }
     }
 

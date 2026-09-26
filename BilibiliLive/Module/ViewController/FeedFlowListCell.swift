@@ -20,7 +20,7 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
 
     override func setup() {
         super.setup()
-        scaleFactor = 1.06
+        scaleFactor = standardFocusScale
 
         if #available(tvOS 26.0, *) {
             blurBackgroundView.effect = UIGlassEffect(style: .clear)
@@ -32,7 +32,7 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
         blurBackgroundView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-        blurBackgroundView.layer.cornerRadius = 20
+        blurBackgroundView.layer.cornerRadius = moreLittleSornerRadius
         blurBackgroundView.layer.cornerCurve = .continuous
         blurBackgroundView.clipsToBounds = true
 
@@ -47,7 +47,7 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
             make.leading.top.bottom.equalToSuperview().inset(14)
             make.width.equalTo(170)
         }
-        imageView.layer.cornerRadius = 14
+        imageView.layer.cornerRadius = moreLittleSornerRadius
         imageView.layer.cornerCurve = .continuous
         imageView.clipsToBounds = true
         imageView.contentMode = .scaleAspectFill

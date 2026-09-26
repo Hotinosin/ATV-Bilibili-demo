@@ -58,7 +58,7 @@ final class AccountSwitcherViewController: UIViewController {
             containerView.effect = UIBlurEffect(style: .dark)
         }
         containerView.clipsToBounds = true
-        containerView.layer.cornerRadius = 36
+        containerView.layer.cornerRadius = lessBigSornerRadius
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
         NSLayoutConstraint.activate([
@@ -223,11 +223,11 @@ private final class AccountSwitcherCell: UICollectionViewCell {
         contentView.clipsToBounds = false
         background.translatesAutoresizingMaskIntoConstraints = false
         background.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        background.layer.cornerRadius = 28
+        background.layer.cornerRadius = normailSornerRadius
         background.layer.cornerCurve = .continuous
         background.layer.borderWidth = 0
         contentView.addSubview(background)
-        background.setAutoGlassEffectView(cornerRadius: 28)
+        background.setAutoGlassEffectView(cornerRadius: normailSornerRadius)
 
         avatarView.translatesAutoresizingMaskIntoConstraints = false
         avatarView.contentMode = .scaleAspectFill
@@ -281,7 +281,7 @@ private final class AccountSwitcherCell: UICollectionViewCell {
         let isFocused = (context.nextFocusedView == self)
         coordinator.addCoordinatedAnimations {
             self.background.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.08)
-            self.background.transform = isFocused ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
+            self.background.transform = isFocused ? CGAffineTransform(scaleX: standardFocusScale, y: standardFocusScale) : .identity
         }
     }
 
@@ -325,10 +325,10 @@ private final class AccountSwitcherAddCell: UICollectionViewCell {
         contentView.clipsToBounds = false
         background.translatesAutoresizingMaskIntoConstraints = false
         background.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        background.layer.cornerRadius = 28
+        background.layer.cornerRadius = normailSornerRadius
         background.layer.cornerCurve = .continuous
         contentView.addSubview(background)
-        background.setAutoGlassEffectView(cornerRadius: 28)
+        background.setAutoGlassEffectView(cornerRadius: normailSornerRadius)
 
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.contentMode = .scaleAspectFit
@@ -366,7 +366,7 @@ private final class AccountSwitcherAddCell: UICollectionViewCell {
         let isFocused = (context.nextFocusedView == self)
         coordinator.addCoordinatedAnimations {
             self.background.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.08)
-            self.background.transform = isFocused ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
+            self.background.transform = isFocused ? CGAffineTransform(scaleX: standardFocusScale, y: standardFocusScale) : .identity
         }
     }
 }

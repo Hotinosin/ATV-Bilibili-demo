@@ -56,7 +56,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             likeButton.cornerRadius = 34
-            likeButton.setTansform(x: 1.1, y: 1.1)
+            likeButton.setTansform()
         }
     }
 
@@ -66,7 +66,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             coinButton.cornerRadius = 34
-            coinButton.setTansform(x: 1.2, y: 1.2)
+            coinButton.setTansform()
         }
     }
     
@@ -76,7 +76,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             favButton.cornerRadius = 34
-            favButton.setTansform(x: 1.3, y: 1.3)
+            favButton.setTansform()
         }
     }
     
@@ -86,7 +86,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             dislikeButton.cornerRadius = 34
-            dislikeButton.setTansform(x: 1.4, y: 1.4)
+            dislikeButton.setTansform()
         }
     }
 
@@ -1000,20 +1000,23 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
 }
 
 class DetailLabel: UILabel {
+    private func updateAppearance() {
+        layer.cornerRadius = moreLittleSornerRadius
+        layer.cornerCurve = .continuous
+        backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0)
+    }
+
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
         coordinator.addCoordinatedAnimations {
-            if self.isFocused {
-                self.backgroundColor = .white
-            } else {
-                self.backgroundColor = .clear
-            }
+            self.updateAppearance()
         }
     }
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
         isUserInteractionEnabled = true
+        updateAppearance()
     }
 
     override var canBecomeFocused: Bool {
@@ -1048,6 +1051,7 @@ class NoteDetailView: UIControl {
         backgroundView.layer.shadowRadius = 16.0
         backgroundView.layer.cornerRadius = normailSornerRadius
         backgroundView.layer.cornerCurve = .continuous
+        backgroundView.setAutoGlassEffectView(cornerRadius: normailSornerRadius)
         backgroundView.isHidden = !isFocused
         backgroundView.snp.makeConstraints { make in
             make.top.bottom.equalToSuperview()
@@ -1069,6 +1073,7 @@ class NoteDetailView: UIControl {
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
+        backgroundView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0)
         backgroundView.isHidden = !isFocused
     }
 

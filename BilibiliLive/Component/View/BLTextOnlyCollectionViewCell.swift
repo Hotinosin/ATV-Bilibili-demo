@@ -9,18 +9,28 @@ import Foundation
 import UIKit
 
 class BLTextOnlyCollectionViewCell: BLMotionCollectionViewCell {
-    private let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    private let effectView = UIVisualEffectView()
     private let selectedWhiteView = UIView()
     let titleLabel = UILabel()
     var didSelect: ((_ isFocused: Bool) -> Void)?
 
     override func setup() {
         super.setup()
-        scaleFactor = 1.15
+        scaleFactor = standardFocusScale
+        if #available(tvOS 26.0, *) {
+            effectView.effect = UIGlassEffect(style: .clear)
+        } else {
+            effectView.effect = UIBlurEffect(style: .dark)
+        }
         contentView.addSubview(effectView)
         effectView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+        effectView.contentView.addSubview(selectedWhiteView)
+        selectedWhiteView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        selectedWhiteView.isHidden = true
         effectView.contentView.addSubview(titleLabel)
         titleLabel.snp.makeConstraints { make in
             make.centerX.centerY.equalToSuperview()
@@ -39,5 +49,6 @@ class BLTextOnlyCollectionViewCell: BLMotionCollectionViewCell {
         super.didUpdateFocus(in: context, with: coordinator)
         didSelect?(isFocused)
         selectedWhiteView.isHidden = !isFocused
+        selectedWhiteView.backgroundColor = UIColor.white.withAlphaComponent(0.18)
     }
 }

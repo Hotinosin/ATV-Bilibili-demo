@@ -19,7 +19,7 @@ class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
 
     override func setup() {
         super.setup()
-        scaleFactor = 1.05
+        scaleFactor = compactFocusScale
 
         addsubViews()
     }

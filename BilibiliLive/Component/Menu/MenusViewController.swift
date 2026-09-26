@@ -266,14 +266,18 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         }
         cellModels.append(CellModel(iconImage: UIImage(systemName: "person.crop.circle.badge.checkmark"), title: "关注", contentVC: followsViewController))
 
-        let FeedViewController = FeedViewController()
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: FeedViewController))
-
-        let featuredViewController = FeaturedBrowserViewController()
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "play.rectangle.on.rectangle"), title: "沉浸推荐", contentVC: featuredViewController))
-
+        let feedViewController = FeedViewController()
+        feedViewController.collectionVC.styleOverride = .sideBar
         let tvRecommendViewController = TVRecommendViewController()
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "tv"), title: "TV推荐", contentVC: tvRecommendViewController))
+        tvRecommendViewController.collectionVC.styleOverride = .sideBar
+        let recommendationViewController = CategoryViewController()
+        recommendationViewController.contentExtendsUnderTopSafeArea = true
+        recommendationViewController.categories = [
+            .init(title: "推荐", contentVC: feedViewController),
+            .init(title: "TV推荐", contentVC: tvRecommendViewController),
+            .init(title: "沉浸推荐", contentVC: FeaturedBrowserViewController()),
+        ]
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: recommendationViewController))
 
         let historyViewController = HistoryViewController()
         cellModels.append(CellModel(iconImage: UIImage(systemName: "clock.fill"), title: "历史记录", contentVC: historyViewController))

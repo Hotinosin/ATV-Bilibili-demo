@@ -338,7 +338,11 @@ class VideoPlayerViewModel {
                                                      currentPlayInfo: playInfo,
                                                      sequenceProvider: sequenceProvider)
             infoTabs.onSelectDiscovery = { [weak self] info in
-                self?.playTemporaryOverride(info)
+                if Settings.direatlyEnterVideo {
+                    self?.playTemporaryOverride(info)
+                } else {
+                    self?.onShowDetail?(info)
+                }
             }
             plugins.append(infoTabs)
         }
@@ -355,7 +359,11 @@ class VideoPlayerViewModel {
         if collectionEpisodes.count > 1 {
             let collection = VideoCollectionInfoPlugin(episodes: collectionEpisodes, currentAid: playInfo.aid)
             collection.onSelect = { [weak self] info in
-                self?.updatePlayInfo(info)
+                if Settings.direatlyEnterVideo {
+                    self?.updatePlayInfo(info)
+                } else {
+                    self?.onShowDetail?(info)
+                }
             }
             plugins.append(collection)
         }

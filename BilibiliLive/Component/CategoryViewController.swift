@@ -17,8 +17,16 @@ class CategoryViewController: UIViewController, BLTabBarContentVCProtocol {
 
     var typeCollectionView: UICollectionView!
     var categories = [CategoryDisplayModel]()
+    var contentExtendsUnderTopSafeArea = false
     let contentView = UIView()
     weak var currentViewController: UIViewController?
+
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        if let typeCollectionView {
+            return [typeCollectionView]
+        }
+        return super.preferredFocusEnvironments
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -40,7 +48,7 @@ class CategoryViewController: UIViewController, BLTabBarContentVCProtocol {
         view.addSubview(contentView)
         contentView.snp.makeConstraints { make in
             make.bottom.right.left.equalToSuperview()
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.top.equalTo(contentExtendsUnderTopSafeArea ? view.snp.top : view.safeAreaLayoutGuide.snp.top)
         }
 
         typeCollectionView = UICollectionView(frame: .zero, collectionViewLayout: BLSettingLineCollectionViewCell.makeLayout())

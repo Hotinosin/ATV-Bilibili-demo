@@ -131,6 +131,7 @@ extension VideoPlayerDiscoveryInfoViewController: UICollectionViewDataSource, UI
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self),
                                                       for: indexPath) as! RelatedVideoCell
         cell.imageView.adjustsImageWhenAncestorFocused = false
+        cell.scaleFactor = 1.08
         cell.update(data: entry.displayData)
         return cell
     }

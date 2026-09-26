@@ -218,6 +218,7 @@ class VideoDetailViewController: UIViewController {
         ugcCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         recommandCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
         ugcCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
+        replysCollectionView.register(CompactReplyCell.self, forCellWithReuseIdentifier: CompactReplyCell.identifier)
         replysCollectionView.collectionViewLayout = makeReplyCollectionViewLayout()
         noteView.onPrimaryAction = {
             [weak self] note in
@@ -755,27 +756,26 @@ extension VideoDetailViewController: UICollectionViewDelegate {
             present(detail, animated: true)
         case ugcCollectionView:
             let video = allUgcEpisodes[indexPath.item]
-            if Settings.showRelatedVideoInCurrentVC {
-                aid = video.aid
-                cid = video.cid
-                Task { await fetchData() }
-            } else {
-                let detailVC = VideoDetailViewController.create(aid: video.aid, cid: video.cid)
-                detailVC.present(from: self)
-            }
+            openRelatedVideo(aid: video.aid, cid: video.cid)
         case recommandCollectionView:
             if let video = data?.Related[indexPath.item] {
-                if Settings.showRelatedVideoInCurrentVC {
-                    aid = video.aid
-                    cid = video.cid
-                    Task { await fetchData() }
-                } else {
-                    let detailVC = VideoDetailViewController.create(aid: video.aid, cid: video.cid)
-                    detailVC.present(from: self)
-                }
+                openRelatedVideo(aid: video.aid, cid: video.cid)
             }
         default:
             break
+        }
+    }
+
+    private func openRelatedVideo(aid: Int, cid: Int) {
+        let detailVC = VideoDetailViewController.create(aid: aid, cid: cid)
+        if Settings.direatlyEnterVideo {
+            detailVC.present(from: self)
+        } else if Settings.showRelatedVideoInCurrentVC {
+            self.aid = aid
+            self.cid = cid
+            Task { await fetchData() }
+        } else {
+            detailVC.present(from: self, direatlyEnterVideo: false)
         }
     }
 
@@ -833,7 +833,7 @@ extension VideoDetailViewController: UICollectionViewDataSource {
             }
             return cell
         case replysCollectionView:
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ReplyCell.self), for: indexPath) as! ReplyCell
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CompactReplyCell.identifier, for: indexPath) as! CompactReplyCell
             if let reply = replys?.replies?[indexPath.item] {
                 cell.config(replay: reply)
             }
@@ -926,13 +926,13 @@ extension VideoDetailViewController {
 
     func makeReplyCollectionViewLayout() -> UICollectionViewLayout {
         let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                            heightDimension: .estimated(180)))
+                                                            heightDimension: .fractionalHeight(1)))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                       heightDimension: .estimated(180)),
+                                                                       heightDimension: .absolute(108)),
                                                        subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = .init(top: 0, leading: 100, bottom: 0, trailing: 100)
-        section.interGroupSpacing = 2
+        section.contentInsets = .init(top: 12, leading: 100, bottom: 12, trailing: 100)
+        section.interGroupSpacing = 8
         return UICollectionViewCompositionalLayout(section: section)
     }
 }
@@ -949,9 +949,9 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
             make.top.left.right.equalToSuperview()
             make.width.equalTo(imageView.snp.height).multipliedBy(16.0 / 9)
         }
-//        imageView.layer.cornerRadius = normailSornerRadius
-//        imageView.clipsToBounds = true
-//        imageView.contentMode = .scaleAspectFill
+        imageView.layer.cornerRadius = normailSornerRadius
+        imageView.clipsToBounds = true
+        imageView.contentMode = .scaleAspectFill
         imageView.adjustsImageWhenAncestorFocused = true
         titleLabel.snp.makeConstraints { make in
             make.left.equalToSuperview().offset(12)

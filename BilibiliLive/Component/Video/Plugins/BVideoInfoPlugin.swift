@@ -14,16 +14,32 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
     let desp: String?
     let pic: URL?
     let viewPoints: [PlayerInfo.ViewPoint]?
+    private weak var configuredPlayer: AVPlayer?
+    private weak var playerVC: AVPlayerViewController?
 
     init(title: String?, subTitle: String?, desp: String?, pic: URL?, viewPoints: [PlayerInfo.ViewPoint]?) {
         self.title = title
         self.subTitle = subTitle
-        self.desp = desp
+        let description = desp?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        self.desp = description.isEmpty ? "暂无简介" : description
         self.pic = pic
         self.viewPoints = viewPoints
     }
 
+    func playerDidLoad(playerVC: AVPlayerViewController) {
+        self.playerVC = playerVC
+        if let player = playerVC.player {
+            updatePlayerInfo(player: player)
+        }
+    }
+
     func playerWillStart(player: AVPlayer) {
+        updatePlayerInfo(player: player)
+    }
+
+    private func updatePlayerInfo(player: AVPlayer) {
+        guard configuredPlayer !== player else { return }
+        configuredPlayer = player
         Task {
             async let info: () = AVPlayerMetaUtils.setPlayerInfo(title: title, subTitle: subTitle, desp: desp, pic: pic, player: player)
             if let viewPoints {
@@ -31,6 +47,10 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
                 await vp
             }
             await info
+            await MainActor.run { [weak self] in
+                guard let playerVC = self?.playerVC else { return }
+                playerVC.customInfoViewControllers = sortedVideoInfoControllers(playerVC.customInfoViewControllers)
+            }
         }
     }
 

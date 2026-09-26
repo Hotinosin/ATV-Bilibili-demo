@@ -190,7 +190,7 @@ final class VideoPlayerInfoTabsPlugin: NSObject, CommonPlayerPlugin {
 }
 
 func sortedVideoInfoControllers(_ controllers: [UIViewController]) -> [UIViewController] {
-    let order = ["评论", "合集", "相关视频", "博主视频", "互动"]
+    let order = ["评论", "合集", "相关视频", "博主视频", "简介", "互动"]
     return controllers.sorted {
         (order.firstIndex(of: $0.title ?? "") ?? order.count) <
             (order.firstIndex(of: $1.title ?? "") ?? order.count)
@@ -203,16 +203,16 @@ private final class VideoPlayerCommentsInfoViewController: UIViewController, UIC
         let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
                                                             heightDimension: .fractionalHeight(1)))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                       heightDimension: .absolute(180)),
+                                                                       heightDimension: .absolute(108)),
                                                        subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = .init(top: 8, leading: 32, bottom: 8, trailing: 32)
-        section.interGroupSpacing = 4
+        section.contentInsets = .init(top: 12, leading: 80, bottom: 12, trailing: 80)
+        section.interGroupSpacing = 8
         let view = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout(section: section))
         view.backgroundColor = .clear
         view.dataSource = self
         view.delegate = self
-        view.register(UINib(nibName: ReplyCell.identifier, bundle: nil), forCellWithReuseIdentifier: ReplyCell.identifier)
+        view.register(CompactReplyCell.self, forCellWithReuseIdentifier: CompactReplyCell.identifier)
         return view
     }()
 
@@ -230,7 +230,7 @@ private final class VideoPlayerCommentsInfoViewController: UIViewController, UIC
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        preferredContentSize = CGSize(width: 0, height: 460)
+        preferredContentSize = CGSize(width: 0, height: 360)
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -244,7 +244,7 @@ private final class VideoPlayerCommentsInfoViewController: UIViewController, UIC
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { replies.count }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ReplyCell.identifier, for: indexPath) as! ReplyCell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CompactReplyCell.identifier, for: indexPath) as! CompactReplyCell
         cell.config(replay: replies[indexPath.item])
         return cell
     }

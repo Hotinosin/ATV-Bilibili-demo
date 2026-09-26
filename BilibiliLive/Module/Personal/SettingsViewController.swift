@@ -351,13 +351,18 @@ class SettingsSwitchCell: BLMotionCollectionViewCell {
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
         updateColor()
     }
 
     func setupView() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(descLabel)
-        contentView.layer.cornerRadius = 10
+        scaleFactor = 1.04
+        contentView.layer.cornerRadius = moreLittleSornerRadius
+        contentView.layer.cornerCurve = .continuous
+        contentView.clipsToBounds = true
+        contentView.setAutoGlassEffectView(cornerRadius: moreLittleSornerRadius)
 
         titleLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(20)
@@ -376,6 +381,12 @@ class SettingsSwitchCell: BLMotionCollectionViewCell {
     }
 
     func updateColor() {
+        if #available(tvOS 26.0, *) {
+            contentView.backgroundColor = isFocused ? UIColor.white.withAlphaComponent(0.18) : .clear
+            titleLabel.textColor = .white
+            descLabel.textColor = isFocused ? .white : UIColor.secondaryLabel
+            return
+        }
         if traitCollection.userInterfaceStyle == .dark {
             if isFocused {
                 contentView.backgroundColor = UIColor.white

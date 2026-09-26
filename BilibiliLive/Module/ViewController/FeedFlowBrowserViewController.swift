@@ -372,13 +372,13 @@ class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol
         view.addSubview(listCollectionView)
 
         listTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(12)
-            make.leading.equalToSuperview().offset(48)
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(80)
+            make.leading.equalToSuperview().offset(120)
         }
 
         listCollectionView.snp.makeConstraints { make in
             make.top.equalTo(listTitleLabel.snp.bottom).offset(18)
-            make.leading.equalToSuperview().offset(36)
+            make.leading.equalToSuperview().offset(108)
             make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).offset(-24)
             make.width.equalTo(470)
         }

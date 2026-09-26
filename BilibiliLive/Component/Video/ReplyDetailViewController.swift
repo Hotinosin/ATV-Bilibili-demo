@@ -10,7 +10,7 @@ class ReplyDetailViewController: UIViewController {
     private var scrollView: UIScrollView!
     private var contentView: UIView!
     private var titleLabel: UILabel!
-    private var replyLabel: UIButton!
+    private var rootReplyCell: CompactReplyCell!
     private var replyCollectionView: UICollectionView!
     private var imageStackView: UIStackView!
     private var buttonStackView: UIStackView!
@@ -31,11 +31,7 @@ class ReplyDetailViewController: UIViewController {
         super.viewDidLoad()
 
         setUpViews()
-        replyLabel.setTitle(reply.content.message, for: .normal)
-        replyLabel.setTitleColor(UIColor.label, for: .normal)
-        if let attr = reply.createAttributedString(displayView: replyLabel) {
-            replyLabel.setAttributedTitle(attr, for: .normal)
-        }
+        rootReplyCell.config(replay: reply)
 
         reply.content.pictures?.compactMap { URL(string: $0.img_src) }.forEach { url in
             let imageView = UIImageView()
@@ -92,7 +88,7 @@ class ReplyDetailViewController: UIViewController {
             let label = UILabel()
             contentView.addSubview(label)
             label.font = .boldSystemFont(ofSize: 60)
-            label.text = "评论"
+            label.text = "评论详情"
 
             label.snp.makeConstraints { make in
                 make.centerX.equalToSuperview()
@@ -102,24 +98,15 @@ class ReplyDetailViewController: UIViewController {
             return label
         }()
 
-        replyLabel = {
-            let label = UIButton()
-            contentView.addSubview(label)
-            label.titleLabel?.numberOfLines = 0
-            label.titleLabel?.textAlignment = .left
-            label.titleLabel?.font = .preferredFont(forTextStyle: .headline)
-            label.contentHorizontalAlignment = .left
-            label.setContentCompressionResistancePriority(.required, for: .vertical)
-            label.snp.makeConstraints { make in
+        rootReplyCell = {
+            let cell = CompactReplyCell(frame: .zero)
+            contentView.addSubview(cell)
+            cell.snp.makeConstraints { make in
                 make.top.equalTo(self.titleLabel.snp.bottom).offset(60)
-                make.leading.equalTo(contentView.snp.leadingMargin)
-                make.trailing.equalTo(contentView.snp.trailingMargin)
+                make.leading.trailing.equalToSuperview().inset(100)
+                make.height.equalTo(108)
             }
-            label.titleLabel?.snp.makeConstraints { make in
-                make.top.bottom.equalToSuperview()
-            }
-
-            return label
+            return cell
         }()
 
         imageStackView = {
@@ -130,9 +117,8 @@ class ReplyDetailViewController: UIViewController {
             contentView.addSubview(stackView)
 
             stackView.snp.makeConstraints { make in
-                make.top.equalTo(self.replyLabel.snp.bottom).offset(60)
-                make.leading.equalTo(contentView.snp.leadingMargin)
-                make.trailing.equalTo(contentView.snp.trailingMargin)
+                make.top.equalTo(self.rootReplyCell.snp.bottom).offset(32)
+                make.leading.trailing.equalToSuperview().inset(100)
             }
             return stackView
         }()
@@ -153,23 +139,28 @@ class ReplyDetailViewController: UIViewController {
         }()
 
         replyCollectionView = {
-            let flowLayout = UICollectionViewFlowLayout()
-            flowLayout.itemSize = CGSize(width: 582, height: 360)
-            flowLayout.sectionInset = .init(top: 0, left: 60, bottom: 0, right: 60)
-            flowLayout.minimumLineSpacing = 10
-            flowLayout.minimumInteritemSpacing = 10
+            let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                                heightDimension: .fractionalHeight(1)))
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
+                                                                           heightDimension: .absolute(108)),
+                                                           subitems: [item])
+            let section = NSCollectionLayoutSection(group: group)
+            section.interGroupSpacing = 8
 
-            let collectionView = UICollectionView(frame: .zero, collectionViewLayout: flowLayout)
+            let collectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout(section: section))
             contentView.addSubview(collectionView)
             collectionView.dataSource = self
             collectionView.delegate = self
-            collectionView.register(UINib(nibName: ReplyCell.identifier, bundle: nil), forCellWithReuseIdentifier: ReplyCell.identifier)
+            collectionView.backgroundColor = .clear
+            collectionView.clipsToBounds = false
+            collectionView.isScrollEnabled = false
+            collectionView.register(CompactReplyCell.self, forCellWithReuseIdentifier: CompactReplyCell.identifier)
 
             collectionView.snp.makeConstraints { make in
-                make.leading.trailing.equalToSuperview()
-                make.top.equalTo(self.buttonStackView.snp.bottom).offset(60)
-                make.height.width.equalTo(360)
-                make.bottom.equalToSuperview()
+                make.leading.trailing.equalToSuperview().inset(100)
+                make.top.equalTo(self.buttonStackView.snp.bottom).offset(32)
+                make.height.equalTo((self.reply.replies?.count ?? 0) * 116)
+                make.bottom.equalToSuperview().inset(60)
             }
 
             return collectionView
@@ -183,7 +174,7 @@ extension ReplyDetailViewController: UICollectionViewDataSource, UICollectionVie
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ReplyCell.identifier, for: indexPath) as? ReplyCell else {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CompactReplyCell.identifier, for: indexPath) as? CompactReplyCell else {
             fatalError("cell not found")
         }
 

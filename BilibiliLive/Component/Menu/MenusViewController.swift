@@ -39,9 +39,9 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     @IBOutlet var menusView: UIView! {
         didSet {
             if #available(tvOS 26.0, *) {
-                menusView.setGlassEffectView(style: .clear,
+                menusView.setGlassEffectView(style: .regular,
                                              cornerRadius: lessBigSornerRadius,
-                                             tintColor: UIColor(named: "mainBgColor")?.withAlphaComponent(0.7))
+                                             tintColor: UIColor(named: "mainBgColor")?.withAlphaComponent(0.9))
 
             } else {
                 menusView.setBlurEffectView(cornerRadius: lessBigSornerRadius)
@@ -365,6 +365,16 @@ extension MenusViewController: UICollectionViewDataSource {
 }
 
 extension MenusViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView,
+                        shouldUpdateFocusIn context: UICollectionViewFocusUpdateContext) -> Bool
+    {
+        let isLeavingMenu = context.previouslyFocusedIndexPath != nil && context.nextFocusedIndexPath == nil
+        if isLeavingMenu && !context.focusHeading.contains(.right) {
+            return false
+        }
+        return true
+    }
+
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let model = cellModels[indexPath.item]
         if let vc = model.contentVC {

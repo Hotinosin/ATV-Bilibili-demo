@@ -76,6 +76,7 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
             header.pinToVisibleBounds = false
             section.boundarySupplementaryItems = [header]
             section.interGroupSpacing = 10
+            section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24)
             return section
         }
         return UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -87,6 +88,7 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
         super.viewDidLoad()
         view.addSubview(collectionView)
         collectionView.remembersLastFocusedIndexPath = false
+        collectionView.clipsToBounds = false
         collectionView.snp.makeConstraints { make in
             make.top.right.bottom.equalToSuperview()
             make.left.equalToSuperview().offset(20)

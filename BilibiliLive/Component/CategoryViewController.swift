@@ -62,11 +62,18 @@ class CategoryViewController: UIViewController, BLTabBarContentVCProtocol {
         }
         typeCollectionView.dataSource = self
         typeCollectionView.delegate = self
+        typeCollectionView.remembersLastFocusedIndexPath = true
         typeCollectionView.selectItem(at: IndexPath(item: 0, section: 0), animated: false, scrollPosition: .top)
         collectionView(typeCollectionView, didSelectItemAt: IndexPath(item: 0, section: 0))
 
         let backgroundView = UIView()
-        backgroundView.setAutoGlassEffectView(cornerRadius: bigSornerRadius)
+        if #available(tvOS 26.0, *) {
+            backgroundView.setGlassEffectView(style: .regular,
+                                              cornerRadius: bigSornerRadius,
+                                              tintColor: UIColor(named: "mainBgColor")?.withAlphaComponent(0.9))
+        } else {
+            backgroundView.setBlurEffectView(style: .dark, cornerRadius: bigSornerRadius)
+        }
         view.insertSubview(backgroundView, at: 1)
         backgroundView.snp.makeConstraints { make in
             make.left.right.equalTo(typeCollectionView)
@@ -123,6 +130,16 @@ extension CategoryViewController: UICollectionViewDataSource {
 }
 
 extension CategoryViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView,
+                        shouldUpdateFocusIn context: UICollectionViewFocusUpdateContext) -> Bool
+    {
+        let isLeavingDrawer = context.previouslyFocusedIndexPath != nil && context.nextFocusedIndexPath == nil
+        if isLeavingDrawer && !context.focusHeading.contains(.right) {
+            return false
+        }
+        return true
+    }
+
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         isShowMenus(isFocused: false)
         setViewController(vc: categories[indexPath.item].contentVC)

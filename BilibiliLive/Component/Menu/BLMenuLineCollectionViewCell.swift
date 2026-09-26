@@ -10,9 +10,8 @@ import UIKit
 class BLMenuLineCollectionViewCell: BLSettingLineCollectionViewCell {
     var iconImageView = UIImageView()
     override func addsubViews() {
-        
-//        selectedWhiteView.setAutoGlassEffectView(cornerRadius: selectedWhiteView.height / 2)
-        selectedWhiteView.setCornerRadius(cornerRadius: height / 2)
+        selectedWhiteView.layer.cornerRadius = lessBigSornerRadius
+        selectedWhiteView.layer.cornerCurve = .continuous
         selectedWhiteView.backgroundColor = UIColor(named: "menuCellColor")
         selectedWhiteView.isHidden = !isFocused
         addSubview(selectedWhiteView)
@@ -40,6 +39,12 @@ class BLMenuLineCollectionViewCell: BLSettingLineCollectionViewCell {
         }
         titleLabel.textAlignment = .left
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .medium)
+        titleLabel.textColor = UIColor(named: "titleColor")
+    }
+
+    override func updateView() {
+        selectedWhiteView.isHidden = !(isFocused || isSelected)
+        selectedWhiteView.backgroundColor = UIColor(named: "menuCellColor")
         titleLabel.textColor = UIColor(named: "titleColor")
     }
 }

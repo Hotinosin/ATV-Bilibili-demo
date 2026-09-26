@@ -23,7 +23,9 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
         scaleFactor = standardFocusScale
 
         if #available(tvOS 26.0, *) {
-            blurBackgroundView.effect = UIGlassEffect(style: .clear)
+            let glassEffect = UIGlassEffect(style: .regular)
+            glassEffect.tintColor = UIColor.black.withAlphaComponent(0.45)
+            blurBackgroundView.effect = glassEffect
         } else {
             blurBackgroundView.effect = UIBlurEffect(style: .dark)
         }

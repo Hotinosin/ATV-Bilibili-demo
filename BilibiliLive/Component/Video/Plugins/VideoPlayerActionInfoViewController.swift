@@ -17,7 +17,7 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
         let isOn: Bool
     }
 
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    private let blurView = UIVisualEffectView()
     private let focusedBackgroundView = UIView()
     private let imageView = UIImageView()
     private let titleLabel = UILabel()
@@ -27,6 +27,11 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
     override func setup() {
         super.setup()
         scaleFactor = 1.08
+        if #available(tvOS 26.0, *) {
+            blurView.effect = UIGlassEffect(style: .clear)
+        } else {
+            blurView.effect = UIBlurEffect(style: .dark)
+        }
         contentView.addSubview(blurView)
         blurView.translatesAutoresizingMaskIntoConstraints = false
         blurView.layer.cornerRadius = 18
@@ -96,9 +101,17 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
 
     private func updateAppearance() {
         guard let viewModel else { return }
-        focusedBackgroundView.isHidden = !isFocused
         let iconName = viewModel.isOn ? viewModel.selectedImageName : viewModel.imageName
         imageView.image = UIImage(systemName: iconName)
+        if #available(tvOS 26.0, *) {
+            focusedBackgroundView.isHidden = false
+            focusedBackgroundView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0)
+            imageView.tintColor = .white
+            titleLabel.textColor = .white
+            valueLabel.textColor = UIColor.white.withAlphaComponent(0.8)
+            return
+        }
+        focusedBackgroundView.isHidden = !isFocused
         let foregroundColor: UIColor = isFocused ? .black : .white
         imageView.tintColor = foregroundColor
         titleLabel.textColor = foregroundColor

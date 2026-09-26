@@ -10,7 +10,8 @@ import UIKit
 final class FeedFlowListCell: BLMotionCollectionViewCell {
     static let reuseID = String(describing: FeedFlowListCell.self)
 
-    private let blurBackgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    private let blurBackgroundView = UIVisualEffectView()
+    private let focusedBackgroundView = UIView()
     private let imageView = UIImageView()
     private let titleLabel = UILabel()
     private let metaLabel = UILabel()
@@ -21,6 +22,12 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
         super.setup()
         scaleFactor = 1.06
 
+        if #available(tvOS 26.0, *) {
+            blurBackgroundView.effect = UIGlassEffect(style: .clear)
+        } else {
+            blurBackgroundView.effect = UIBlurEffect(style: .dark)
+        }
+
         contentView.addSubview(blurBackgroundView)
         blurBackgroundView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -28,6 +35,12 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
         blurBackgroundView.layer.cornerRadius = 20
         blurBackgroundView.layer.cornerCurve = .continuous
         blurBackgroundView.clipsToBounds = true
+
+        focusedBackgroundView.isUserInteractionEnabled = false
+        blurBackgroundView.contentView.addSubview(focusedBackgroundView)
+        focusedBackgroundView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
 
         blurBackgroundView.contentView.addSubview(imageView)
         imageView.snp.makeConstraints { make in
@@ -104,6 +117,12 @@ final class FeedFlowListCell: BLMotionCollectionViewCell {
     }
 
     private func updateAppearance() {
+        if #available(tvOS 26.0, *) {
+            focusedBackgroundView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : isCurrent ? 0.1 : 0)
+            titleLabel.textColor = .white
+            metaLabel.textColor = UIColor.white.withAlphaComponent(0.78)
+            return
+        }
         blurBackgroundView.effect = UIBlurEffect(style: isFocused || isCurrent ? .light : .dark)
         titleLabel.textColor = isFocused || isCurrent ? .black : .white
         metaLabel.textColor = isFocused || isCurrent ? UIColor.black.withAlphaComponent(0.75) : UIColor.white.withAlphaComponent(0.78)

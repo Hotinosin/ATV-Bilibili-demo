@@ -7,7 +7,7 @@ final class AccountSwitcherViewController: UIViewController {
         case actions
     }
 
-    private let containerView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    private let containerView = UIVisualEffectView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
     private let closeButton = UIButton(type: .system)
@@ -52,6 +52,11 @@ final class AccountSwitcherViewController: UIViewController {
     }
 
     private func setupContainer() {
+        if #available(tvOS 26.0, *) {
+            containerView.effect = UIGlassEffect(style: .clear)
+        } else {
+            containerView.effect = UIBlurEffect(style: .dark)
+        }
         containerView.clipsToBounds = true
         containerView.layer.cornerRadius = 36
         containerView.translatesAutoresizingMaskIntoConstraints = false
@@ -219,8 +224,10 @@ private final class AccountSwitcherCell: UICollectionViewCell {
         background.translatesAutoresizingMaskIntoConstraints = false
         background.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         background.layer.cornerRadius = 28
+        background.layer.cornerCurve = .continuous
         background.layer.borderWidth = 0
         contentView.addSubview(background)
+        background.setAutoGlassEffectView(cornerRadius: 28)
 
         avatarView.translatesAutoresizingMaskIntoConstraints = false
         avatarView.contentMode = .scaleAspectFill
@@ -273,8 +280,7 @@ private final class AccountSwitcherCell: UICollectionViewCell {
         super.didUpdateFocus(in: context, with: coordinator)
         let isFocused = (context.nextFocusedView == self)
         coordinator.addCoordinatedAnimations {
-            self.background.layer.borderWidth = isFocused ? 4 : 0
-            self.background.layer.borderColor = isFocused ? UIColor.systemBlue.cgColor : UIColor.clear.cgColor
+            self.background.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.08)
             self.background.transform = isFocused ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
         }
     }
@@ -320,7 +326,9 @@ private final class AccountSwitcherAddCell: UICollectionViewCell {
         background.translatesAutoresizingMaskIntoConstraints = false
         background.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         background.layer.cornerRadius = 28
+        background.layer.cornerCurve = .continuous
         contentView.addSubview(background)
+        background.setAutoGlassEffectView(cornerRadius: 28)
 
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.contentMode = .scaleAspectFit
@@ -357,8 +365,7 @@ private final class AccountSwitcherAddCell: UICollectionViewCell {
         super.didUpdateFocus(in: context, with: coordinator)
         let isFocused = (context.nextFocusedView == self)
         coordinator.addCoordinatedAnimations {
-            self.background.layer.borderWidth = isFocused ? 4 : 0
-            self.background.layer.borderColor = isFocused ? UIColor.systemBlue.cgColor : UIColor.clear.cgColor
+            self.background.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.08)
             self.background.transform = isFocused ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
         }
     }

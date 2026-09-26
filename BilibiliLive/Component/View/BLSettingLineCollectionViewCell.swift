@@ -8,7 +8,7 @@
 import UIKit
 
 class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
-    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+    let effectView = UIVisualEffectView()
     let selectedWhiteView = UIView()
     let titleLabel = UILabel()
     override var isSelected: Bool {
@@ -25,6 +25,11 @@ class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
     }
 
     func addsubViews() {
+        if #available(tvOS 26.0, *) {
+            effectView.effect = UIGlassEffect(style: .clear)
+        } else {
+            effectView.effect = UIBlurEffect(style: .light)
+        }
         contentView.addSubview(effectView)
         effectView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -32,7 +37,7 @@ class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
         effectView.layer.cornerRadius = moreLittleSornerRadius
         effectView.layer.cornerCurve = .continuous
         effectView.clipsToBounds = true
-        selectedWhiteView.backgroundColor = UIColor.white
+        selectedWhiteView.backgroundColor = .white
         selectedWhiteView.isHidden = !isFocused
         effectView.contentView.addSubview(selectedWhiteView)
         selectedWhiteView.snp.makeConstraints { make in
@@ -47,6 +52,7 @@ class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
         titleLabel.textAlignment = .left
         titleLabel.font = UIFont.systemFont(ofSize: 30, weight: .medium)
         titleLabel.textColor = .black
+        updateView()
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
@@ -56,6 +62,12 @@ class BLSettingLineCollectionViewCell: BLMotionCollectionViewCell {
 
     func updateView() {
         selectedWhiteView.isHidden = !(isFocused || isSelected)
+        if #available(tvOS 26.0, *) {
+            selectedWhiteView.backgroundColor = UIColor.white.withAlphaComponent(0.18)
+            titleLabel.textColor = .white
+        } else {
+            titleLabel.textColor = .black
+        }
     }
 
     static func makeLayout() -> UICollectionViewCompositionalLayout {

@@ -423,6 +423,7 @@ class TabBarTileCell: BLMotionCollectionViewCell {
         contentView.layer.cornerRadius = 16
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true
+        contentView.setAutoGlassEffectView(cornerRadius: 16)
 
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOffset = CGSize(width: 0, height: 8)
@@ -447,6 +448,12 @@ class TabBarTileCell: BLMotionCollectionViewCell {
     }
 
     private func updateAppearance() {
+        if #available(tvOS 26.0, *) {
+            contentView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0.06)
+            titleLabel.textColor = .white
+            layer.shadowOpacity = isFocused ? 0.2 : 0
+            return
+        }
         if isFocused {
             contentView.backgroundColor = .white
             titleLabel.textColor = .black

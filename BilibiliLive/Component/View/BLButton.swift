@@ -222,7 +222,11 @@ class BLButton: UIControl {
         }
 
         effectView.contentView.addSubview(selectedWhiteView)
-        selectedWhiteView.backgroundColor = UIColor.white
+        if #available(tvOS 26.0, *) {
+            selectedWhiteView.backgroundColor = UIColor.white.withAlphaComponent(0.18)
+        } else {
+            selectedWhiteView.backgroundColor = .white
+        }
         selectedWhiteView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }

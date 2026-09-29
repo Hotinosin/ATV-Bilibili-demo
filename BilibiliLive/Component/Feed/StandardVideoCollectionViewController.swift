@@ -18,6 +18,8 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
     var lastReloadDate = Date()
     var reloadInterval: TimeInterval = 60 * 60
     var reloading = false
+    private var reloadRequested = false
+    private var reloadVersion = 0
     private var page = 0
 
     var backMenuAction: (() -> Void)?
@@ -91,11 +93,12 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
     }
 
     func goDetail(with record: T) {
-        let detailVC = VideoDetailViewController.create(aid: record.aid, cid: record.cid)
+        let detailVC = VideoDetailViewController.create(aid: record.aid, cid: record.cid, coverURL: record.pic)
         detailVC.present(from: self)
     }
 
     func reloadData() {
+        reloadVersion += 1
         Task {
             await reallyReloadData()
             reloadOtherRequest()
@@ -105,18 +108,29 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
     func reloadOtherRequest() {
     }
 
+    func applyReloadedData(_ records: [T]) {
+        collectionVC.displayDatas = []
+        collectionVC.appendData(displayData: records)
+    }
+
     func reallyReloadData() async {
-        if reloading { return }
+        if reloading {
+            reloadRequested = true
+            return
+        }
         reloading = true
         defer {
             reloading = false
+            if reloadRequested {
+                reloadRequested = false
+                reloadData()
+            }
         }
         lastReloadDate = Date()
         page = 1
         do {
             let res = try await request(page: 1)
-            collectionVC.displayDatas = []
-            collectionVC.appendData(displayData: res)
+            if !reloadRequested { applyReloadedData(res) }
         } catch let err {
             let alert = UIAlertController(title: "Error", message: "\(err)", preferredStyle: .alert)
             alert.addAction(.init(title: "Ok", style: .cancel))
@@ -128,9 +142,11 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
 
     private func loadMore() {
         guard supportPullToLoad() else { return }
+        let version = reloadVersion
         Task {
             do {
                 if let res = (try? await request(page: page + 1)) {
+                    guard version == reloadVersion else { return }
                     collectionVC.appendData(displayData: res)
                     page = page + 1
                 }

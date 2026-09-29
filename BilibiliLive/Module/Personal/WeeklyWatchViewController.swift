@@ -13,6 +13,8 @@ class WeeklyWatchViewController: StandardVideoCollectionViewController<VideoDeta
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.showHeader = true
+        collectionVC.loadViewIfNeeded()
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
     }
 
     override func supportPullToLoad() -> Bool {

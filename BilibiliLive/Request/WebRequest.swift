@@ -562,12 +562,23 @@ extension WebRequest {
     }
 
     static func requestReplys(aid: Int, complete: ((Replys) -> Void)?) {
-        request(url: "https://api.bilibili.com/x/v2/reply", parameters: ["type": 1, "oid": aid, "sort": 1, "nohot": 0]) {
+        request(url: "https://api.bilibili.com/x/v2/reply/main", parameters: ["type": 1, "oid": aid, "mode": 3, "next": 0, "ps": 20]) {
             (result: Result<Replys, RequestError>) in
             if let details = try? result.get() {
                 complete?(details)
+            } else {
+                request(url: "https://api.bilibili.com/x/v2/reply", parameters: ["type": 1, "oid": aid, "sort": 1, "pn": 1, "ps": 20]) {
+                    (fallback: Result<Replys, RequestError>) in
+                    if let details = try? fallback.get() { complete?(details) }
+                }
             }
         }
+    }
+
+    static func requestChildReplies(aid: Int, root: Int, page: Int, complete: @escaping (Result<Replys, RequestError>) -> Void) {
+        request(url: "https://api.bilibili.com/x/v2/reply/reply",
+                parameters: ["type": 1, "oid": aid, "root": root, "pn": page, "ps": 20],
+                complete: complete)
     }
 
     static func requestSubtitle(url: URL) async throws -> [SubtitleContent] {
@@ -698,6 +709,15 @@ struct HistoryData: DisplayData, Codable {
         let cid: Int
     }
 
+    struct Bangumi: Codable, Hashable {
+        struct Season: Codable, Hashable {
+            let season_id: Int?
+        }
+
+        let ep_id: Int?
+        let season: Season?
+    }
+
     let pic: URL?
 
     let owner: VideoOwner
@@ -707,7 +727,7 @@ struct HistoryData: DisplayData, Codable {
     let duration: Int
     let view_at: Int
     let stat: Stat?
-    //    let bangumi: BangumiData?
+    let bangumi: Bangumi?
 
     // displayData
     let title: String
@@ -724,7 +744,7 @@ struct HistoryData: DisplayData, Codable {
     }
 
     var overlay: DisplayOverlay? {
-        var leftItems = [DisplayOverlay.DisplayOverlayItem]()
+        let leftItems = [DisplayOverlay.DisplayOverlayItem]()
         var rightItems = [DisplayOverlay.DisplayOverlayItem]()
         rightItems.append(DisplayOverlay.DisplayOverlayItem(icon: nil, text: "\(TimeInterval(progress).timeString())/\(TimeInterval(duration).timeString())"))
         return DisplayOverlay(leftItems: leftItems, rightItems: rightItems)
@@ -973,9 +993,16 @@ struct Replys: Codable, Hashable {
         let member: Member
         let content: Content
         let replies: [Reply]?
+        let rpid: Int?
+        let parent: Int?
+        let like: Int?
+        let rcount: Int?
+        let ctime: Int?
     }
 
     let replies: [Reply]?
+    let hots: [Reply]?
+    let top_replies: [Reply]?
 }
 
 struct BangumiSeasonInfo: Codable {
@@ -984,6 +1011,11 @@ struct BangumiSeasonInfo: Codable {
 }
 
 struct BangumiInfo: Codable, Hashable {
+    struct Season: Codable, Hashable {
+        let season_id: Int
+        let season_title: String?
+    }
+
     struct Episode: Codable, Hashable {
         let id: Int
         let aid: Int
@@ -1026,6 +1058,7 @@ struct BangumiInfo: Codable, Hashable {
     let episodes: [Episode] // 正片剧集列表
     let user_status: UserStatus?
     let section: [Section]?
+    let seasons: [Season]?
 
     func findEpisodeById(_ epid: Int) -> Episode? {
         if let epi = episodes.first(where: { $0.id == epid }) {

@@ -12,6 +12,9 @@ let largeItmeCount = 4
 let normalItmeCount = 5
 
 class SettingsViewController: UIViewController, UICollectionViewDelegate {
+    private let settingsViewport = UIView()
+    private let fadeMask = CAGradientLayer()
+
     class SectionModel: Hashable, Equatable {
         let title: String
         let items: [CellModel]
@@ -34,6 +37,7 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
     class CellModel: Hashable, Equatable {
         let title: String
         let desp: () -> String
+        var isToggle = false
         let action: ((@escaping () -> Void) -> Void)?
 
         var updateAction: (() -> Void)?
@@ -55,12 +59,11 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
 
     let collectionView: UICollectionView = {
         let layout = UICollectionViewCompositionalLayout { _, _ -> NSCollectionLayoutSection? in
-            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(68))
+            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(80))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
-            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(68))
+            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(80))
             let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
-            group.interItemSpacing = .fixed(10)
 
             let section = NSCollectionLayoutSection(group: group)
             let headerSize = NSCollectionLayoutSize(
@@ -75,7 +78,7 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
             )
             header.pinToVisibleBounds = false
             section.boundarySupplementaryItems = [header]
-            section.interGroupSpacing = 10
+            section.interGroupSpacing = 16
             section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24)
             return section
         }
@@ -86,12 +89,46 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.addSubview(collectionView)
+        let appIcon = UIImageView(image: UIImage(named: "App Icon"))
+        appIcon.contentMode = .scaleAspectFit
+        appIcon.layer.cornerRadius = 48
+        appIcon.layer.cornerCurve = .continuous
+        appIcon.clipsToBounds = true
+        view.addSubview(appIcon)
+        appIcon.snp.makeConstraints { make in
+            make.centerX.equalToSuperview().multipliedBy(0.5)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(560)
+            make.height.equalTo(336)
+        }
+
+        let heading = UILabel()
+        heading.text = "设置"
+        heading.font = .systemFont(ofSize: 24, weight: .bold)
+        heading.textColor = .secondaryLabel
+        view.addSubview(heading)
+        heading.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(30)
+            make.centerX.equalToSuperview()
+            make.height.equalTo(64)
+        }
+
+        view.addSubview(settingsViewport)
+        settingsViewport.addSubview(collectionView)
+        fadeMask.colors = [UIColor.clear.cgColor, UIColor.white.cgColor,
+                           UIColor.white.cgColor, UIColor.clear.cgColor]
+        fadeMask.locations = [0, 0.1, 0.9, 1]
+        settingsViewport.layer.mask = fadeMask
+        settingsViewport.snp.makeConstraints { make in
+            make.top.equalTo(heading.snp.bottom).offset(24)
+            make.leading.equalTo(view.snp.centerX).offset(20)
+            make.trailing.equalToSuperview().inset(70)
+            make.bottom.equalToSuperview()
+        }
         collectionView.remembersLastFocusedIndexPath = false
-        collectionView.clipsToBounds = false
+        collectionView.clipsToBounds = true
         collectionView.snp.makeConstraints { make in
-            make.top.right.bottom.equalToSuperview()
-            make.left.equalToSuperview().offset(20)
+            make.edges.equalToSuperview()
         }
 
         collectionView.delegate = self
@@ -100,6 +137,11 @@ class SettingsViewController: UIViewController, UICollectionViewDelegate {
 
         configureDataSource()
         setupData()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        fadeMask.frame = settingsViewport.bounds
     }
 
     private func configureDataSource() {
@@ -254,12 +296,14 @@ extension SettingsViewController {
     func Toggle(title: String, setting: @autoclosure @escaping () -> Bool,
                 onChange: @autoclosure @escaping () -> Void,
                 extraAction: ((Bool) -> Void)? = nil) -> CellModel {
-        return CellModel(title: title, desp: setting() ? "开" : "关") {
+        let model = CellModel(title: title, desp: setting() ? "开" : "关") {
             update in
             onChange()
             extraAction?(setting())
             update()
         }
+        model.isToggle = true
+        return model
     }
 
     func Actions<T>(title: String,
@@ -333,6 +377,9 @@ extension SettingsViewController {
 class SettingsSwitchCell: BLMotionCollectionViewCell {
     private let titleLabel = UILabel()
     private let descLabel = UILabel()
+    private let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
+    private let switchTrack = UIView()
+    private let switchThumb = UIView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -347,9 +394,36 @@ class SettingsSwitchCell: BLMotionCollectionViewCell {
     func set(with model: SettingsViewController.CellModel) {
         titleLabel.text = model.title
         descLabel.text = model.desp()
+        descLabel.isHidden = model.isToggle
+        chevron.isHidden = model.isToggle
+        switchTrack.isHidden = !model.isToggle
+        if model.isToggle {
+            updateSwitch(isOn: model.desp() == "开")
+        } else {
+            accessibilityValue = model.desp()
+        }
         model.updateAction = { [weak self] in
             self?.descLabel.text = model.desp()
+            if model.isToggle {
+                self?.updateSwitch(isOn: model.desp() == "开")
+            } else {
+                self?.accessibilityValue = model.desp()
+            }
         }
+    }
+
+    private func updateSwitch(isOn: Bool) {
+        switchTrack.backgroundColor = isOn ? .systemGreen : UIColor.white.withAlphaComponent(0.25)
+        switchThumb.snp.remakeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.size.equalTo(30)
+            if isOn {
+                make.trailing.equalToSuperview().inset(5)
+            } else {
+                make.leading.equalToSuperview().offset(5)
+            }
+        }
+        accessibilityValue = isOn ? "开" : "关"
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
@@ -360,50 +434,56 @@ class SettingsSwitchCell: BLMotionCollectionViewCell {
     func setupView() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(descLabel)
-        scaleFactor = compactFocusScale
-        contentView.layer.cornerRadius = moreLittleSornerRadius
+        contentView.addSubview(chevron)
+        contentView.addSubview(switchTrack)
+        switchTrack.addSubview(switchThumb)
+        titleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        scaleFactor = 1.02
+        contentView.layer.cornerRadius = 40
         contentView.layer.cornerCurve = .continuous
         contentView.clipsToBounds = true
-        contentView.setAutoGlassEffectView(cornerRadius: moreLittleSornerRadius)
 
         titleLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(20)
             make.centerY.equalToSuperview()
             make.trailing.lessThanOrEqualTo(descLabel.snp.leading).offset(-10)
+            make.trailing.lessThanOrEqualTo(switchTrack.snp.leading).offset(-10)
         }
 
         descLabel.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().offset(-20)
+            make.trailing.equalTo(chevron.snp.leading).offset(-12)
             make.centerY.equalToSuperview()
         }
 
+        chevron.contentMode = .scaleAspectFit
+        chevron.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(20)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(18)
+            make.height.equalTo(28)
+        }
+
         descLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        switchTrack.layer.cornerRadius = 20
+        switchThumb.layer.cornerRadius = 15
+        switchThumb.backgroundColor = .white
+        switchTrack.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(20)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(76)
+            make.height.equalTo(40)
+        }
 
         updateColor()
     }
 
     func updateColor() {
-        if #available(tvOS 26.0, *) {
-            contentView.backgroundColor = isFocused ? UIColor.white.withAlphaComponent(0.18) : .clear
-            titleLabel.textColor = .white
-            descLabel.textColor = isFocused ? .white : UIColor.secondaryLabel
-            return
-        }
-        if traitCollection.userInterfaceStyle == .dark {
-            if isFocused {
-                contentView.backgroundColor = UIColor.white
-                titleLabel.textColor = UIColor.black
-                descLabel.textColor = UIColor.black
-            } else {
-                contentView.backgroundColor = UIColor.clear
-                titleLabel.textColor = UIColor.white
-                descLabel.textColor = UIColor.secondaryLabel
-            }
-        } else {
-            contentView.backgroundColor = isFocused ? UIColor.white : UIColor.clear
-            titleLabel.textColor = .black
-            descLabel.textColor = UIColor.secondaryLabel
-        }
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        contentView.backgroundColor = isFocused ? .white : (isDark ? UIColor.white.withAlphaComponent(0.16) : UIColor.black.withAlphaComponent(0.08))
+        titleLabel.textColor = isFocused ? .black : (isDark ? .white : .black)
+        descLabel.textColor = isFocused ? .darkGray : .secondaryLabel
+        chevron.tintColor = isFocused ? .darkGray : .secondaryLabel
     }
 }
 

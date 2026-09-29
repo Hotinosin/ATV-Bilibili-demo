@@ -11,6 +11,9 @@ class HotViewController: StandardVideoCollectionViewController<VideoDetail.Info>
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.isShowCove = true
+        collectionVC.showHeader = false
+        collectionVC.loadViewIfNeeded()
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
     }
 
     override func request(page: Int) async throws -> [VideoDetail.Info] {

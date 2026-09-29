@@ -18,6 +18,7 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
     private let upLabel = UILabel()
     private let sortLabel = UILabel()
     private let imageView = UIImageView()
+    private let focusGlassView = UIVisualEffectView()
     private let imageViewParallax = UIImageView()
     let infoView = UIView()
     private let avatarView = UIImageView()
@@ -52,6 +53,12 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
 //        imageViewParallax.backgroundColor = .red
         
         imageView.adjustsImageWhenAncestorFocused = true
+        focusGlassView.isUserInteractionEnabled = false
+        focusGlassView.alpha = 0
+        imageView.addSubview(focusGlassView)
+        focusGlassView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
         let style = styleOverride ?? Settings.displayStyle
 
 //        switch style.feedColCount {
@@ -172,10 +179,23 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        focusGlassView.alpha = 0
         imageView.kf.cancelDownloadTask()
         avatarView.kf.cancelDownloadTask()
         onLongPress = nil
         avatarView.image = nil
+    }
+
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        if isFocused {
+            if #available(tvOS 26.0, *) {
+                focusGlassView.effect = UIGlassEffect(style: .clear)
+            } else {
+                focusGlassView.effect = UIBlurEffect(style: .light)
+            }
+        }
+        focusGlassView.alpha = isFocused ? 0.3 : 0
     }
 }
 
@@ -221,6 +241,8 @@ extension FeedDisplayStyle {
             return 20
         }
     }
+
+    var vSpacing: CGFloat { 12 }
 
     var heightEstimated: CGFloat {
         switch self {

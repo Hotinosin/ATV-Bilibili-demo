@@ -12,6 +12,9 @@ import UIKit
 class ToViewViewController: StandardVideoCollectionViewController<ToViewData> {
     override func setupCollectionView() {
         super.setupCollectionView()
+        collectionVC.showHeader = false
+        collectionVC.loadViewIfNeeded()
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
         collectionVC.didSelect = { [weak self] record in
             guard let self,
                   let record = record as? ToViewData

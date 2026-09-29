@@ -10,6 +10,7 @@ import SnapKit
 import UIKit
 
 class SegmentViewController: UIViewController, BLTabBarContentVCProtocol {
+    static let contentTopInset: CGFloat = 64
     struct CategoryDisplayModel {
         let title: String
         let contentVC: UIViewController
@@ -20,6 +21,10 @@ class SegmentViewController: UIViewController, BLTabBarContentVCProtocol {
     var categories = [CategoryDisplayModel]()
     let contentView = UIView()
     weak var currentViewController: UIViewController?
+
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        segmentedControl == nil ? super.preferredFocusEnvironments : [segmentedControl]
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,14 +41,16 @@ class SegmentViewController: UIViewController, BLTabBarContentVCProtocol {
 
         let items = categories.map { $0.title }
         segmentedControl = UISegmentedControl(items: items)
+        segmentedControl.setTitleTextAttributes([.font: UIFont.systemFont(ofSize: 24, weight: .bold)], for: .normal)
         segmentedControl.selectedSegmentIndex = 0
         segmentedControl.addTarget(self, action: #selector(segmentChanged(_:)), for: .valueChanged)
 
         view.addSubview(segmentedControl)
         segmentedControl.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
+            make.top.equalToSuperview().offset(30)
             make.centerX.equalToSuperview()
             make.width.lessThanOrEqualToSuperview().inset(40)
+            make.height.equalTo(64)
         }
 
         let leftFocusGuide = UIFocusGuide()
@@ -64,10 +71,9 @@ class SegmentViewController: UIViewController, BLTabBarContentVCProtocol {
         }
         rightFocusGuide.preferredFocusEnvironments = [segmentedControl]
 
-        view.addSubview(contentView)
+        view.insertSubview(contentView, belowSubview: segmentedControl)
         contentView.snp.makeConstraints { make in
-            make.top.equalTo(segmentedControl.snp.bottom)
-            make.left.right.bottom.equalToSuperview()
+            make.edges.equalToSuperview()
         }
 
         // Load initial view controller
@@ -79,19 +85,28 @@ class SegmentViewController: UIViewController, BLTabBarContentVCProtocol {
     @objc func segmentChanged(_ sender: UISegmentedControl) {
         let index = sender.selectedSegmentIndex
         if index >= 0 && index < categories.count {
-            setViewController(vc: categories[index].contentVC)
+            setViewController(vc: categories[index].contentVC, animated: true)
         }
     }
 
-    func setViewController(vc: UIViewController) {
-        currentViewController?.willMove(toParent: nil)
-        currentViewController?.view.removeFromSuperview()
-        currentViewController?.removeFromParent()
-        currentViewController = vc
-        addChild(vc)
-        contentView.addSubview(vc.view)
-        vc.view.makeConstraintsToBindToSuperview()
-        vc.didMove(toParent: self)
+    func setViewController(vc: UIViewController, animated: Bool = false) {
+        guard currentViewController !== vc else { return }
+        let install = {
+            self.currentViewController?.willMove(toParent: nil)
+            self.currentViewController?.view.removeFromSuperview()
+            self.currentViewController?.removeFromParent()
+            self.currentViewController = vc
+            self.addChild(vc)
+            self.contentView.addSubview(vc.view)
+            vc.view.makeConstraintsToBindToSuperview()
+            vc.didMove(toParent: self)
+        }
+        if animated, !UIAccessibility.isReduceMotionEnabled, view.window != nil {
+            UIView.transition(with: contentView, duration: 0.25, options: .transitionCrossDissolve,
+                              animations: install)
+        } else {
+            install()
+        }
     }
 
     func reloadData() {

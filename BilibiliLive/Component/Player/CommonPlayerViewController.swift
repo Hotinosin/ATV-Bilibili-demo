@@ -10,7 +10,9 @@ import UIKit
 
 class CommonPlayerViewController: UIViewController {
     private let playerVC = AVPlayerViewController()
+    var playerContentOverlayView: UIView? { playerVC.contentOverlayView }
     private var activePlugins = [CommonPlayerPlugin]()
+    private var isInstallingPlugins = false
     private var observations = Set<NSKeyValueObservation>()
     private var rateObserver: NSKeyValueObservation?
     private var statusObserver: NSKeyValueObservation?
@@ -65,9 +67,17 @@ class CommonPlayerViewController: UIViewController {
         plugin.addViewToPlayerOverlay(container: playerVC.contentOverlayView!)
         activePlugins.append(plugin)
         plugin.playerDidLoad(playerVC: playerVC)
-        if playerVC.transportBarCustomMenuItems.isEmpty == false {
+        if !isInstallingPlugins, playerVC.transportBarCustomMenuItems.isEmpty == false {
             updateMenus()
         }
+    }
+
+    func replacePlugins(with plugins: [CommonPlayerPlugin]) {
+        removeAllPlugins()
+        isInstallingPlugins = true
+        plugins.forEach { addPlugin(plugin: $0) }
+        isInstallingPlugins = false
+        updateMenus()
     }
 
     func removePlugin(plugin: CommonPlayerPlugin) {
@@ -171,7 +181,7 @@ extension CommonPlayerViewController {
             if let playItem = player.currentItem {
                 observePlayerItem(playItem)
             }
-            updateMenus()
+            if !isInstallingPlugins { updateMenus() }
         } else {
             cleanUpObserver()
         }

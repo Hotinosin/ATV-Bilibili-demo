@@ -10,16 +10,6 @@ import SwiftUI
 import TVUIKit
 import UIKit
 
-let sornerRadius = 8.0
-let littleSornerRadius = 24.0
-let moreLittleSornerRadius = 18.0
-let normailSornerRadius = 25.0
-let lessBigSornerRadius = 35.0
-let bigSornerRadius = 45.0
-let compactFocusScale = 1.04
-let standardFocusScale = 1.06
-let prominentFocusScale = 1.08
-
 let EVENT_COLLECTION_TO_TOP = NSNotification.Name("EVENT_COLLECTION_TO_TOP")
 let EVENT_COLLECTION_TO_SHOW_MENU = NSNotification.Name("EVENT_COLLECTION_TO_SHOW_MENU")
 
@@ -103,6 +93,7 @@ class FeedCollectionViewController: UIViewController {
 
     private enum Section: CaseIterable {
         case main
+        case oldRecommendations
     }
 
     private var coverViewIsShowing = false
@@ -116,6 +107,7 @@ class FeedCollectionViewController: UIViewController {
     var pageSize = 20
     var showHeader: Bool = true
     var headerText = ""
+    var oldRecommendationsStartIndex: Int?
     var customHeaderConfig: FeedHeaderConfig?
     var coverViewHeight = 500.0
     let collectionEdgeInsetTop = 40.0
@@ -152,8 +144,14 @@ class FeedCollectionViewController: UIViewController {
     private var _displayData = [AnyDispplayData]() {
         didSet {
             var snapshot = NSDiffableDataSourceSnapshot<Section, AnyDispplayData>()
-            snapshot.appendSections(Section.allCases)
-            snapshot.appendItems(_displayData, toSection: .main)
+            if let start = oldRecommendationsStartIndex, start > 0, start < _displayData.count {
+                snapshot.appendSections([.main, .oldRecommendations])
+                snapshot.appendItems(Array(_displayData[..<start]), toSection: .main)
+                snapshot.appendItems(Array(_displayData[start...]), toSection: .oldRecommendations)
+            } else {
+                snapshot.appendSections([.main])
+                snapshot.appendItems(_displayData, toSection: .main)
+            }
             dataSource.apply(snapshot)
         }
     }
@@ -194,7 +192,11 @@ class FeedCollectionViewController: UIViewController {
     func reloadData() {
         guard isShowTopCover?() ?? false else { return }
         Task {
-            try await viewModel.loadFavList()
+            do {
+                try await viewModel.loadFavList()
+            } catch {
+                Logger.warn(error)
+            }
         }
     }
 
@@ -225,13 +227,13 @@ class FeedCollectionViewController: UIViewController {
 
             viewModel.playAction = { [weak self] data in
                 guard let self = self else { return }
-                let player = VideoPlayerViewController(playInfo: PlayInfo(aid: data.id, cid: data.cid, epid: 0))
+                let player = VideoPlayerViewController(playInfo: PlayInfo(aid: data.id, cid: data.cid, epid: 0, coverURL: data.pic))
                 self.present(player, animated: true)
             }
 
             viewModel.detailAction = { [weak self] data in
                 guard let self = self else { return }
-                let detailVC = VideoDetailViewController.create(aid: data.id, cid: data.cid)
+                let detailVC = VideoDetailViewController.create(aid: data.id, cid: data.cid, coverURL: data.pic)
                 detailVC.present(from: self)
             }
             // 创建 UIHostingController
@@ -260,7 +262,11 @@ class FeedCollectionViewController: UIViewController {
             collectionView.contentInset = UIEdgeInsets(top: collectionEdgeInsetTop, left: 0, bottom: 0, right: 0)
 
             Task {
-                try await viewModel.loadFavList()
+                do {
+                    try await viewModel.loadFavList()
+                } catch {
+                    Logger.warn(error)
+                }
             }
 
         } else {
@@ -275,6 +281,7 @@ class FeedCollectionViewController: UIViewController {
 
         collectionView.dataSource = dataSource
         collectionView.delegate = self
+        collectionView.backgroundColor = .clear
 
         NotificationCenter.default.addObserver(forName: EVENT_COLLECTION_TO_TOP, object: nil, queue: .main) { [weak self] _ in
             self?.handleMenuPress()
@@ -297,12 +304,12 @@ class FeedCollectionViewController: UIViewController {
 
     private func makeCollectionViewLayout() -> UICollectionViewLayout {
         UICollectionViewCompositionalLayout {
-            [weak self] _, _ in
-            self?.makeGridLayoutSection()
+            [weak self] index, _ in
+            self?.makeGridLayoutSection(isOldRecommendations: index == 1)
         }
     }
 
-    private func makeGridLayoutSection() -> NSCollectionLayoutSection {
+    private func makeGridLayoutSection(isOldRecommendations: Bool) -> NSCollectionLayoutSection {
         let style = styleOverride ?? Settings.displayStyle
 
         // top
@@ -320,7 +327,7 @@ class FeedCollectionViewController: UIViewController {
             heightDimension: .fractionalHeight(style.groupFractionalHeight)
         ), repeatingSubitem: item, count: style.feedColCount)
 
-        let vSpacing: CGFloat = style == .large ? 34 : 26
+        let vSpacing = style.vSpacing
         let baseSpacing: CGFloat = reservesSidebarSpace ? 34 : 0
 
         group.edgeSpacing = NSCollectionLayoutEdgeSpacing(leading: .fixed(baseSpacing), top: .fixed(vSpacing), trailing: .fixed(0), bottom: .fixed(vSpacing))
@@ -331,9 +338,9 @@ class FeedCollectionViewController: UIViewController {
             section.contentInsets = NSDirectionalEdgeInsets(top: baseSpacing, leading: 0, bottom: 0, trailing: 0)
         }
 
-        if showHeader {
-            let headerHeight = customHeaderConfig?.estimatedHeight ?? 44
-            let headerKind = customHeaderConfig?.elementKind ?? TitleSupplementaryView.reuseIdentifier
+        if showHeader || isOldRecommendations {
+            let headerHeight = isOldRecommendations ? 64 : (customHeaderConfig?.estimatedHeight ?? 44)
+            let headerKind = isOldRecommendations ? TitleSupplementaryView.reuseIdentifier : (customHeaderConfig?.elementKind ?? TitleSupplementaryView.reuseIdentifier)
             let titleSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
                                                    heightDimension: .estimated(headerHeight))
             let titleSupplementary = NSCollectionLayoutBoundarySupplementaryItem(
@@ -351,14 +358,16 @@ class FeedCollectionViewController: UIViewController {
         let dataSource = UICollectionViewDiffableDataSource<Section, AnyDispplayData>(collectionView: collectionView, cellProvider: makeCellRegistration().cellProvider)
 
         let supplementaryRegistration = UICollectionView.SupplementaryRegistration<TitleSupplementaryView>(elementKind: TitleSupplementaryView.reuseIdentifier) {
-            [weak self] supplementaryView, _, _ in
+            [weak self] supplementaryView, _, indexPath in
             guard let self else { return }
-            supplementaryView.label.text = self.headerText
+            let isOldRecommendations = indexPath.section == 1
+            supplementaryView.label.text = isOldRecommendations ? "以下是旧推荐" : self.headerText
+            supplementaryView.separatorLine.isHidden = !isOldRecommendations
         }
 
         dataSource.supplementaryViewProvider = { [weak self] collectionView, kind, indexPath in
             guard let self else { return nil }
-            if let customConfig = self.customHeaderConfig, kind == customConfig.elementKind {
+            if indexPath.section == 0, let customConfig = self.customHeaderConfig, kind == customConfig.elementKind {
                 return customConfig.viewProvider(collectionView, kind, indexPath)
             }
             return collectionView.dequeueConfiguredReusableSupplementary(
@@ -411,7 +420,7 @@ extension FeedCollectionViewController: UICollectionViewDelegate {
             bgImageView.kf.setImage(with: data.data.pic, placeholder: nil, options: nil) { _ in
             }
         }
-        guard indexPath.row == _displayData.count - 1, !isLoading, !finished else {
+        guard dataSource.itemIdentifier(for: indexPath) == _displayData.last, !isLoading, !finished else {
             return
         }
         isLoading = true

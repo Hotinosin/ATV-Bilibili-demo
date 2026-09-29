@@ -38,7 +38,7 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
         blurView.layer.cornerCurve = .continuous
         blurView.clipsToBounds = true
 
-        focusedBackgroundView.backgroundColor = .white
+        focusedBackgroundView.backgroundColor = UIColor.white.withAlphaComponent(0.18)
         focusedBackgroundView.isHidden = true
         blurView.contentView.addSubview(focusedBackgroundView)
         focusedBackgroundView.translatesAutoresizingMaskIntoConstraints = false
@@ -103,19 +103,10 @@ final class VideoPlayerInfoActionCell: BLMotionCollectionViewCell {
         guard let viewModel else { return }
         let iconName = viewModel.isOn ? viewModel.selectedImageName : viewModel.imageName
         imageView.image = UIImage(systemName: iconName)
-        if #available(tvOS 26.0, *) {
-            focusedBackgroundView.isHidden = false
-            focusedBackgroundView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 0.18 : 0)
-            imageView.tintColor = .white
-            titleLabel.textColor = .white
-            valueLabel.textColor = UIColor.white.withAlphaComponent(0.8)
-            return
-        }
         focusedBackgroundView.isHidden = !isFocused
-        let foregroundColor: UIColor = isFocused ? .black : .white
-        imageView.tintColor = foregroundColor
-        titleLabel.textColor = foregroundColor
-        valueLabel.textColor = isFocused ? UIColor.black.withAlphaComponent(0.85) : UIColor.white.withAlphaComponent(0.8)
+        imageView.tintColor = .white
+        titleLabel.textColor = .white
+        valueLabel.textColor = UIColor.white.withAlphaComponent(0.8)
     }
 }
 
@@ -125,7 +116,7 @@ final class VideoPlayerActionInfoViewController: UIViewController {
         static let cardHeight: CGFloat = 210
         static let sectionInsets = NSDirectionalEdgeInsets(top: 28, leading: 32, bottom: 28, trailing: 32)
         static let interGroupSpacing: CGFloat = 24
-        static let preferredHeight: CGFloat = 320
+        static let preferredHeight: CGFloat = 280
     }
 
     enum ActionKind: Hashable {

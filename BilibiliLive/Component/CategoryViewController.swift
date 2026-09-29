@@ -17,7 +17,7 @@ class CategoryViewController: UIViewController, BLTabBarContentVCProtocol {
 
     var typeCollectionView: UICollectionView!
     var categories = [CategoryDisplayModel]()
-    var contentExtendsUnderTopSafeArea = false
+    var contentExtendsUnderTopSafeArea = true
     let contentView = UIView()
     weak var currentViewController: UIViewController?
 

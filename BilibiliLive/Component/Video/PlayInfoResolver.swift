@@ -44,13 +44,20 @@ enum PlayInfoResolver {
         if let epid = resolved.epid, epid > 0 {
             matchedEpisode = info.episodes.first(where: { $0.id == epid }) ?? info.episodes.first
         } else {
-            matchedEpisode = info.episodes.first
+            matchedEpisode = info.episodes.first(where: { $0.id == info.user_status?.progress?.last_ep_id }) ?? info.episodes.first
         }
 
         if let episode = matchedEpisode {
             resolved.epid = episode.id
             resolved.aid = episode.aid
             resolved.cid = episode.cid
+            if playInfo.epid ?? 0 == 0,
+               let progress = info.user_status?.progress,
+               progress.last_ep_id == episode.id,
+               progress.last_time > 0 {
+                resolved.lastPlayCid = episode.cid
+                resolved.playTimeInSecond = progress.last_time
+            }
             if resolved.coverURL == nil {
                 resolved.coverURL = episode.cover
             }

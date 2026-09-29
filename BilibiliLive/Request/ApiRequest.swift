@@ -272,6 +272,10 @@ enum ApiRequest {
             let cover_left_text_3: String?
             let cover_right_text: String?
 
+            static func == (lhs: Self, rhs: Self) -> Bool { lhs.param == rhs.param }
+
+            func hash(into hasher: inout Hasher) { hasher.combine(param) }
+
             enum CodingKeys: String, CodingKey {
                 case can_play, title, param, args, idx, cover, goto, top_rcmd_reason, bottom_rcmd_reason, desc, player_args
                 case cover_left_text_1, cover_left_text_2, cover_left_text_3, cover_right_text
@@ -355,10 +359,14 @@ enum ApiRequest {
         }
     }
 
-    static func getFeeds(lastIdx: Int = 0) async throws -> [FeedResp.Items] {
+    static func getFeedsPage(lastIdx: Int = 0) async throws -> (items: [FeedResp.Items], nextIdx: Int?) {
         let idx = "\(lastIdx)"
         let resp: FeedResp = try await request(EndPoint.feed, parameters: ["idx": idx, "flush": "0", "column": "4", "device": "pad", "pull": idx == "0" ? "1" : "0"])
-        return resp.items.filter({ $0.goto == "av" })
+        return (resp.items.filter { $0.goto == "av" }.uniqued(), resp.items.last?.idx)
+    }
+
+    static func getFeeds(lastIdx: Int = 0) async throws -> [FeedResp.Items] {
+        try await getFeedsPage(lastIdx: lastIdx).items
     }
 
     static func requestDislike(aid: Int, dislike: Bool) {

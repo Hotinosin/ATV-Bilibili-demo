@@ -86,26 +86,11 @@ class BLCustomButton: BLButton {
     private func updateButton() {
         action?(isFocused)
         if isFocused {
-            if UITraitCollection.current.userInterfaceStyle == .dark {
-                print("当前是暗黑模式 🌙")
-                imageView.image = highLightImage ?? getImage()
-                imageView.tintColor = .black
-            } else {
-                print("当前是浅色模式 ☀️")
-                imageView.image = highLightImage ?? getImage()
-                imageView.tintColor = .black
-            }
-
+            imageView.image = highLightImage ?? getImage()
+            imageView.tintColor = .black
         } else {
-            if UITraitCollection.current.userInterfaceStyle == .dark {
-                print("当前是暗黑模式 🌙")
-                imageView.image = getImage()
-                imageView.tintColor = .white
-            } else {
-                print("当前是浅色模式 ☀️")
-                imageView.image = getImage()
-                imageView.tintColor = .white
-            }
+            imageView.image = getImage()
+            imageView.tintColor = .white
         }
     }
 
@@ -147,25 +132,13 @@ class BLCustomTextButton: BLButton {
         }
         titleLabel.text = title
         titleLabel.font = titleFont
-        if UITraitCollection.current.userInterfaceStyle == .dark {
-            print("当前是暗黑模式 🌙")
-            titleLabel.textColor = titleColor
-        } else {
-            print("当前是浅色模式 ☀️")
-            titleLabel.textColor = titleColor
-        }
+        titleLabel.textColor = titleColor
         titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
     }
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
-        if UITraitCollection.current.userInterfaceStyle == .dark {
-            print("当前是暗黑模式 🌙")
-            titleLabel.textColor = isFocused ? titleSelectedColor : titleColor
-        } else {
-            print("当前是浅色模式 ☀️")
-            titleLabel.textColor = isFocused ? titleSelectedColor : titleColor
-        }
+        titleLabel.textColor = isFocused ? titleSelectedColor : titleColor
     }
 }
 
@@ -176,6 +149,7 @@ class BLButton: UIControl {
     private let selectedWhiteView = UIView()
     
     var cornerRadius:CGFloat = 0
+    var usesStrongFocusAppearance = false
 
     var action: ((_ isFocused: Bool) -> Void)?
 
@@ -247,9 +221,12 @@ class BLButton: UIControl {
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
+        if usesStrongFocusAppearance {
+            selectedWhiteView.backgroundColor = UIColor.white.withAlphaComponent(isFocused ? 1.0 : 0.18)
+        }
         if isFocused {
             selectedWhiteView.isHidden = false
-            let scale = compactFocusScale
+            let scale = usesStrongFocusAppearance ? standardFocusScale : compactFocusScale
             coordinator.addCoordinatedAnimations {
                 self.transform = CGAffineTransformMakeScale(scale, scale)
                 let scaleDiff = (self.bounds.size.height * scale - self.bounds.size.height) / 2

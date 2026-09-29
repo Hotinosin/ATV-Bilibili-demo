@@ -28,6 +28,7 @@ class FollowUpsViewController: UIViewController {
             return self?.makeGridLayoutSection()
         }
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.contentInset.top = SegmentViewController.contentTopInset
 
         collectionView.register(UpCell.self, forCellWithReuseIdentifier: "cell")
         collectionView.dataSource = self
@@ -44,7 +45,7 @@ class FollowUpsViewController: UIViewController {
     }
 
     private func makeGridLayoutSection() -> NSCollectionLayoutSection {
-        let heightDimension = NSCollectionLayoutDimension.estimated(200)
+        let heightDimension = NSCollectionLayoutDimension.absolute(140)
         let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(0.33),
             heightDimension: heightDimension
@@ -58,7 +59,7 @@ class FollowUpsViewController: UIViewController {
             repeatingSubitem: item,
             count: 3
         )
-        let vSpacing: CGFloat = 16
+        let vSpacing: CGFloat = 20
         let baseSpacing: CGFloat = 30
         group.edgeSpacing = NSCollectionLayoutEdgeSpacing(leading: .fixed(baseSpacing), top: .fixed(vSpacing), trailing: .fixed(0), bottom: .fixed(vSpacing))
         let section = NSCollectionLayoutSection(group: group)

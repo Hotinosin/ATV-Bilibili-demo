@@ -66,7 +66,7 @@ class VideoDanmuProvider: DanmuProviderProtocol {
         self.enableDanmuRemoveDup = enableDanmuRemoveDup
     }
 
-    func initVideo(cid id: Int, startPos: Int) async {
+    func prepareVideo(cid id: Int, startPos: Int) {
         cid = id
         upDanmus.removeAll()
         segmentDanmus.removeAll(keepingCapacity: true)
@@ -76,9 +76,12 @@ class VideoDanmuProvider: DanmuProviderProtocol {
         upDanmuIdx = 0
         danmuIdx = 0
 
-        async let view: () = fetchDanmuView()
         let segmentIdx = getSegmentIdx(time: TimeInterval(startPos))
         segmentStatuses[segmentIdx] = true
+    }
+
+    func loadInitialDanmu(startPos: Int) async {
+        async let view: () = fetchDanmuView()
         async let list: () = fetchDanmuList(getSegmentIdx(time: TimeInterval(startPos)))
         await view
         await list

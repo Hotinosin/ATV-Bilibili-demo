@@ -25,11 +25,59 @@ private struct PageRange {
     }
 }
 
+private struct EpisodeCardData: DisplayData {
+    let title: String
+    let pic: URL?
+    let ownerName = ""
+}
+
+final class SeasonFilterButton: UIButton {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        titleLabel?.font = .systemFont(ofSize: 26, weight: .semibold)
+        updateAppearance()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var intrinsicContentSize: CGSize {
+        let size = super.intrinsicContentSize
+        return CGSize(width: size.width + 36, height: max(size.height + 14, 58))
+    }
+
+    override var isSelected: Bool {
+        didSet { updateAppearance() }
+    }
+
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        coordinator.addCoordinatedAnimations { self.updateAppearance() }
+    }
+
+    private func updateAppearance() {
+        setTitleColor(isFocused ? .black : .white, for: .normal)
+        backgroundColor = isFocused ? .white : (isSelected ? UIColor.white.withAlphaComponent(0.25) : UIColor.white.withAlphaComponent(0.08))
+        layer.cornerRadius = 29
+    }
+}
+
 class VideoDetailViewController: UIViewController {
     private let animateTime = 0.8
     private let infoEffectViewCornerRadius: CGFloat = 54
+    private let coverFadeMask = CAGradientLayer()
+    private let commentsFadeMask = CAGradientLayer()
+    private let commentsViewport = UIView()
+    private var commentsHeightConstraint: NSLayoutConstraint?
     private var isCoveImageToToped: Bool = false
+    private var keepsInitialScrollPosition = true
     private var loadingView = UIActivityIndicatorView()
+    private var initialCoverURL: URL?
+    private var coverImageOptions: KingfisherOptionsInfo {
+        UIAccessibility.isReduceMotionEnabled ? [] : [.transition(.fade(0.35))]
+    }
+    private let loadingBlurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    private let loadingShadeView = UIView()
     @IBOutlet var backgroundImageView: UIImageView!
     @IBOutlet var effectContainerView: UIVisualEffectView!
     @IBOutlet var titleLabel: UILabel!
@@ -47,6 +95,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             playButton.cornerRadius = 34
+            playButton.usesStrongFocusAppearance = true
         }
     }
 
@@ -56,7 +105,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             likeButton.cornerRadius = 34
-            likeButton.setTansform()
+            likeButton.usesStrongFocusAppearance = true
         }
     }
 
@@ -66,7 +115,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             coinButton.cornerRadius = 34
-            coinButton.setTansform()
+            coinButton.usesStrongFocusAppearance = true
         }
     }
     
@@ -76,7 +125,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             favButton.cornerRadius = 34
-            favButton.setTansform()
+            favButton.usesStrongFocusAppearance = true
         }
     }
     
@@ -86,7 +135,7 @@ class VideoDetailViewController: UIViewController {
                 self?.toTopContent(isFocused: isFocused)
             }
             dislikeButton.cornerRadius = 34
-            dislikeButton.setTansform()
+            dislikeButton.usesStrongFocusAppearance = true
         }
     }
 
@@ -113,6 +162,8 @@ class VideoDetailViewController: UIViewController {
     @IBOutlet var pageCollectionView: UICollectionView!
     @IBOutlet var recommandCollectionView: UICollectionView!
     @IBOutlet var replysCollectionView: UICollectionView!
+    @IBOutlet var commentsSectionView: UIView!
+    @IBOutlet var commentsTitleLabel: UILabel!
     @IBOutlet var repliesCollectionViewHeightConstraints: NSLayoutConstraint!
     @IBOutlet var ugcCollectionView: UICollectionView!
     @IBOutlet var pageView: UIView!
@@ -141,6 +192,10 @@ class VideoDetailViewController: UIViewController {
     private var lastPlayCid: Int?
     private var lastPlayTitle: String?
     private var playTimeInSecond: Int?
+    private var historyProgress: (cid: Int?, epid: Int?, seconds: Int)?
+    private var directPlayPending = false
+    private var directPlayPresentationReady = false
+    private var directPlayDataReady = false
     private var subType: Int?
     private var data: VideoDetail?
     @IBOutlet var scrollView: UIScrollView!
@@ -166,27 +221,35 @@ class VideoDetailViewController: UIViewController {
         didSet {
             infoVisualEffectView.layer.cornerRadius = infoEffectViewCornerRadius
             if #available(tvOS 26.0, *) {
-                infoVisualEffectView.effect = UIGlassEffect(style: .clear)
-               
+                let glass = UIGlassEffect(style: .regular)
+                glass.tintColor = UIColor.black.withAlphaComponent(0.10)
+                infoVisualEffectView.effect = glass
             }
+            infoVisualEffectView.alpha = 1
         }
     }
 
     private var isBangumi = false
     private var startTime = 0
     private var pages = [VideoPage]()
-    private var replys: Replys?
+    private var seasons = [BangumiInfo.Season]()
+    private let seasonView = UIView()
+    private let seasonRow = UIStackView()
+    private var seasonButtons = [Int: SeasonFilterButton]()
+    private var episodeCovers = [Int: URL]()
+    private var displayedReplies = [Replys.Reply]()
     private var subTitles: [SubtitleData]?
 
     private var allUgcEpisodes = [VideoDetail.Info.UgcSeason.UgcVideoInfo]()
 
     private var subscriptions = [AnyCancellable]()
 
-    static func create(aid: Int, cid: Int?, epid: Int? = nil) -> VideoDetailViewController {
+    static func create(aid: Int, cid: Int?, epid: Int? = nil, coverURL: URL? = nil) -> VideoDetailViewController {
         let vc = UIStoryboard(name: "Main", bundle: .main).instantiateViewController(identifier: String(describing: self)) as! VideoDetailViewController
         vc.aid = aid
         vc.cid = cid ?? 0
         vc.epid = epid ?? 0
+        vc.initialCoverURL = coverURL
         return vc
     }
 
@@ -196,10 +259,21 @@ class VideoDetailViewController: UIViewController {
         return vc
     }
 
-    static func create(seasonId: Int) -> VideoDetailViewController {
+    static func create(seasonId: Int, coverURL: URL? = nil) -> VideoDetailViewController {
         let vc = UIStoryboard(name: "Main", bundle: .main).instantiateViewController(identifier: String(describing: self)) as! VideoDetailViewController
         vc.seasonId = seasonId
+        vc.initialCoverURL = coverURL
         return vc
+    }
+
+    func setHistoryProgress(_ history: HistoryData) {
+        guard history.progress > 0,
+              history.duration <= 0 || history.duration - history.progress > 5 else { return }
+        historyProgress = (history.cid, history.bangumi?.ep_id, history.progress)
+        if let historyCid = history.cid, historyCid == cid {
+            lastPlayCid = historyCid
+            playTimeInSecond = history.progress
+        }
     }
 
     deinit {
@@ -209,17 +283,62 @@ class VideoDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        titleLabel.font = UIFont(name: "PingFangSC-Semibold", size: 40) ?? .systemFont(ofSize: 40, weight: .semibold)
-        pageCollectionView.register(BLTextOnlyCollectionViewCell.self, forCellWithReuseIdentifier: String(describing: BLTextOnlyCollectionViewCell.self))
+        scrollView.delegate = self
+        effectContainerView.isHidden = true
+        backgroundImageView.contentMode = .scaleAspectFill
+        backgroundImageView.clipsToBounds = true
+        topInfoView.subviews.compactMap { $0 as? UIImageView }
+            .first(where: { $0 !== coverImageView })?.isHidden = true
+        coverFadeMask.colors = [UIColor.white.cgColor, UIColor.white.cgColor, UIColor.clear.cgColor]
+        coverFadeMask.locations = [0, 0.78, 1]
+        coverImageView.layer.mask = coverFadeMask
+
+        titleLabel.font = UIFont(name: "PingFangSC-Bold", size: 40) ?? .systemFont(ofSize: 40, weight: .bold)
+        titleLabel.alpha = 1
+        titleLabel.textColor = .white
+        noteView.label.textColor = UIColor.white.withAlphaComponent(0.9)
+        playButton.constraints.first(where: { $0.firstAttribute == .width && $0.secondItem == nil })?.constant = 370
+        actionButtonSpaceView.constraints.first(where: { $0.firstAttribute == .width && $0.secondItem == nil })?.constant = 946
+        pageCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         pageCollectionView.collectionViewLayout = makePageCollectionViewLayout()
         pageCollectionView.clipsToBounds = false
         setupPageRangeCollectionView()
         recommandCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         ugcCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         recommandCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
+        recommandCollectionView.clipsToBounds = false
         ugcCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
+        ugcCollectionView.clipsToBounds = false
         replysCollectionView.register(CompactReplyCell.self, forCellWithReuseIdentifier: CompactReplyCell.identifier)
         replysCollectionView.collectionViewLayout = makeReplyCollectionViewLayout()
+        let commentsSection = commentsSectionView!
+        let commentsTitle = commentsTitleLabel!
+        NSLayoutConstraint.deactivate(commentsSection.constraints.filter {
+            ($0.firstItem as? UIView) === replysCollectionView || ($0.secondItem as? UIView) === replysCollectionView
+        })
+        replysCollectionView.removeFromSuperview()
+        commentsSection.addSubview(commentsViewport)
+        commentsViewport.translatesAutoresizingMaskIntoConstraints = false
+        commentsViewport.addSubview(replysCollectionView)
+        replysCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            commentsViewport.leadingAnchor.constraint(equalTo: commentsSection.leadingAnchor),
+            commentsViewport.trailingAnchor.constraint(equalTo: commentsSection.trailingAnchor),
+            commentsViewport.topAnchor.constraint(equalTo: commentsTitle.bottomAnchor, constant: 22),
+            commentsSection.bottomAnchor.constraint(equalTo: commentsViewport.bottomAnchor, constant: 22),
+            replysCollectionView.leadingAnchor.constraint(equalTo: commentsViewport.leadingAnchor),
+            replysCollectionView.trailingAnchor.constraint(equalTo: commentsViewport.trailingAnchor),
+            replysCollectionView.topAnchor.constraint(equalTo: commentsViewport.topAnchor),
+            replysCollectionView.bottomAnchor.constraint(equalTo: commentsViewport.bottomAnchor),
+        ])
+        let commentsHeightConstraint = commentsViewport.heightAnchor.constraint(equalToConstant: 144)
+        commentsHeightConstraint.isActive = true
+        self.commentsHeightConstraint = commentsHeightConstraint
+        replysCollectionView.isScrollEnabled = true
+        commentsFadeMask.colors = [UIColor.clear.cgColor, UIColor.white.cgColor,
+                                   UIColor.white.cgColor, UIColor.clear.cgColor]
+        commentsFadeMask.locations = [0, 0.1, 0.9, 1]
+        commentsViewport.layer.mask = commentsFadeMask
         noteView.onPrimaryAction = {
             [weak self] note in
             let detail = ContentDetailViewController.createDesp(content: note.label.text ?? "")
@@ -246,55 +365,13 @@ class VideoDetailViewController: UIViewController {
         ])
         focusGuidePlay.preferredFocusEnvironments = [playButton]
 
-        replysCollectionView.publisher(for: \.contentSize).sink { [weak self] _ in
-//            self?.repliesCollectionViewHeightConstraints.constant = newSize.height
-            self?.view.setNeedsLayout()
-        }.store(in: &subscriptions)
-
         Task { await fetchData() }
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-//        animateSequentially([
-//            {
-//                self.playButton.alpha = 1
-//                self.playButton.transform = .identity
-//            },
-//
-//            {
-//                self.likeButton.alpha = 1
-//                self.likeButton.transform = .identity
-//            },
-//
-//            {
-//                self.coinButton.alpha = 1
-//                self.coinButton.transform = .identity
-//            },
-//
-//            {
-//                self.favButton.alpha = 1
-//                self.favButton.transform = .identity
-//            },
-//
-//            {
-//                self.dislikeButton.alpha = 1
-//                self.dislikeButton.transform = .identity
-//            },
-//        ])
-        
-        UIView.animate(springDuration: 0.6, bounce: 0.3) {
-           
-            self.likeButton.alpha = 1
-            self.likeButton.transform = .identity
-            self.coinButton.alpha = 1
-            self.coinButton.transform = .identity
-            self.favButton.alpha = 1
-            self.favButton.transform = .identity
-            self.dislikeButton.alpha = 1
-            self.dislikeButton.transform = .identity
-        }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        coverFadeMask.frame = coverImageView.bounds
+        commentsFadeMask.frame = commentsViewport.bounds
     }
 
     private func toTopContent(isFocused: Bool) {
@@ -306,8 +383,16 @@ class VideoDetailViewController: UIViewController {
         }
     }
 
-    override var preferredFocusedView: UIView? {
-        return playButton
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        [playButton]
+    }
+
+    override func shouldUpdateFocus(in context: UIFocusUpdateContext) -> Bool {
+        if !context.focusHeading.isEmpty,
+           context.previouslyFocusedView?.isDescendant(of: view) == true {
+            keepsInitialScrollPosition = false
+        }
+        return super.shouldUpdateFocus(in: context)
     }
 
     private func updatePlayProgressIfNeeded(progress: BangumiInfo.UserStatus.Progress?, episode: BangumiInfo.Episode) {
@@ -327,6 +412,8 @@ class VideoDetailViewController: UIViewController {
         if titleLabel.text?.isEmpty != false {
             titleLabel.text = "视频选集"
         }
+
+        setupSeasonView()
 
         pageView.addSubview(pageRangeCollectionView)
 
@@ -348,7 +435,7 @@ class VideoDetailViewController: UIViewController {
         pageCollectionView.snp.makeConstraints { make in
             pageCollectionViewTopToTitleConstraint = make.top.equalTo(titleLabel.snp.bottom).offset(30).constraint
             pageCollectionViewTopToRangeConstraint = make.top.equalTo(pageRangeCollectionView.snp.bottom).offset(30).constraint
-            make.height.equalTo(150)
+            make.height.equalTo(300)
         }
         pageCollectionViewTopToRangeConstraint?.deactivate()
     }
@@ -366,6 +453,78 @@ class VideoDetailViewController: UIViewController {
         setPageRangeCollectionViewHidden(false)
     }
 
+    private func setupSeasonView() {
+        guard let stack = pageView.superview as? UIStackView,
+              let index = stack.arrangedSubviews.firstIndex(of: pageView) else { return }
+        stack.insertArrangedSubview(seasonView, at: index)
+        seasonView.isHidden = true
+        seasonView.snp.makeConstraints { make in make.height.equalTo(92) }
+        let label = UILabel()
+        label.text = "季"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 34, weight: .medium)
+        seasonView.addSubview(label)
+        label.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.leading.equalToSuperview().offset(88)
+        }
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        seasonView.addSubview(scrollView)
+        scrollView.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.leading.equalTo(label.snp.trailing).offset(24)
+            make.trailing.equalToSuperview()
+            make.height.equalTo(68)
+        }
+        seasonRow.axis = .horizontal
+        seasonRow.alignment = .center
+        seasonRow.spacing = 18
+        scrollView.addSubview(seasonRow)
+        seasonRow.snp.makeConstraints { make in
+            make.edges.equalTo(scrollView.contentLayoutGuide)
+            make.height.equalTo(scrollView.frameLayoutGuide)
+        }
+    }
+
+    private func updateSeasonView() {
+        seasonView.isHidden = seasons.count < 2
+        guard seasons.count > 1 else { return }
+        let ordered = seasons
+        if seasonButtons.count != ordered.count || ordered.contains(where: { seasonButtons[$0.season_id] == nil }) {
+            seasonRow.arrangedSubviews.forEach {
+                seasonRow.removeArrangedSubview($0)
+                $0.removeFromSuperview()
+            }
+            seasonButtons.removeAll()
+            for season in ordered {
+                let button = SeasonFilterButton()
+                button.setTitle(season.season_title ?? "季 \(season.season_id)", for: .normal)
+                button.addAction(UIAction { [weak self] _ in
+                    self?.selectSeason(season.season_id)
+                }, for: .primaryActionTriggered)
+                seasonRow.addArrangedSubview(button)
+                seasonButtons[season.season_id] = button
+            }
+        }
+        for (id, button) in seasonButtons {
+            button.isSelected = id == seasonId
+        }
+    }
+
+    private func selectSeason(_ id: Int) {
+        guard seasonId != id else { return }
+        seasonId = id
+        epid = 0
+        aid = 0
+        cid = 0
+        lastPlayCid = nil
+        lastPlayTitle = nil
+        playTimeInSecond = nil
+        updateSeasonView()
+        Task { await fetchData() }
+    }
+
     private func setPageRangeCollectionViewHidden(_ isHidden: Bool) {
         pageRangeCollectionView.isHidden = isHidden
         if isHidden {
@@ -379,6 +538,17 @@ class VideoDetailViewController: UIViewController {
 
     private func setupLoading() {
         effectContainerView.isHidden = true
+        if let initialCoverURL {
+            backgroundImageView.kf.setImage(with: initialCoverURL, options: coverImageOptions)
+        }
+        backgroundImageView.alpha = 1
+        loadingBlurView.frame = backgroundImageView.bounds
+        loadingBlurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        loadingShadeView.frame = backgroundImageView.bounds
+        loadingShadeView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        loadingShadeView.backgroundColor = UIColor.black.withAlphaComponent(0.48)
+        backgroundImageView.addSubview(loadingBlurView)
+        backgroundImageView.addSubview(loadingShadeView)
         view.addSubview(loadingView)
         loadingView.color = .white
         loadingView.style = .large
@@ -386,16 +556,35 @@ class VideoDetailViewController: UIViewController {
         loadingView.makeConstraintsBindToCenterOfSuperview()
     }
 
+    private func finishLoading() {
+        loadingView.stopAnimating()
+        loadingView.removeFromSuperview()
+        loadingBlurView.removeFromSuperview()
+        loadingShadeView.removeFromSuperview()
+        effectContainerView.isHidden = false
+        view.layoutIfNeeded()
+        scrollView.setContentOffset(.zero, animated: false)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
+
     func present(from vc: UIViewController, direatlyEnterVideo: Bool = Settings.direatlyEnterVideo) {
         if !direatlyEnterVideo {
             vc.present(self, animated: true)
         } else {
+            directPlayPending = true
             vc.present(self, animated: false) { [weak self] in
                 guard let self else { return }
-                let player = VideoPlayerViewController(playInfo: PlayInfo(aid: self.aid, cid: self.cid, epid: self.epid, seasonId: isBangumi ? self.seasonId : nil, lastPlayCid: self.lastPlayCid, playTimeInSecond: self.playTimeInSecond))
-                self.present(player, animated: true)
+                self.directPlayPresentationReady = true
+                self.startDirectPlaybackIfReady()
             }
         }
+    }
+
+    private func startDirectPlaybackIfReady() {
+        guard directPlayPending, directPlayPresentationReady, directPlayDataReady, cid > 0 else { return }
+        directPlayPending = false
+        actionPlay(self)
     }
 
     private func exit(with error: Error) {
@@ -408,10 +597,9 @@ class VideoDetailViewController: UIViewController {
     }
 
     private func fetchData() async {
+        directPlayDataReady = false
+        keepsInitialScrollPosition = true
         scrollView.setContentOffset(.zero, animated: false)
-        setNeedsFocusUpdate()
-        updateFocusIfNeeded()
-        backgroundImageView.alpha = 0
         setupLoading()
         pageView.isHidden = true
         setPageRangeCollectionViewHidden(true)
@@ -420,6 +608,7 @@ class VideoDetailViewController: UIViewController {
             if seasonId > 0 {
                 isBangumi = true
                 let info = try await WebRequest.requestBangumiInfo(seasonID: seasonId)
+                seasons = info.seasons ?? []
                 subType = info.type
                 if let epi = info.episodes.first(where: { $0.id == info.user_status?.progress?.last_ep_id }) ?? info.episodes.first ?? info.section?.first?.episodes.first {
                     aid = epi.aid
@@ -431,6 +620,7 @@ class VideoDetailViewController: UIViewController {
             } else if epid > 0 {
                 isBangumi = true
                 let info = try await WebRequest.requestBangumiInfo(epid: epid)
+                seasons = info.seasons ?? []
                 seasonId = info.season_id
                 subType = info.type
                 if let epi = info.findEpisodeById(epid) ?? info.episodes.first {
@@ -449,6 +639,7 @@ class VideoDetailViewController: UIViewController {
                 isBangumi = true
                 epid = id
                 let info = try await WebRequest.requestBangumiInfo(epid: epid)
+                seasons = info.seasons ?? []
                 seasonId = info.season_id
                 subType = info.type
                 pages = info.episodes.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.id, from: "", part: $0.title + " " + $0.long_title) })
@@ -457,15 +648,21 @@ class VideoDetailViewController: UIViewController {
                 }
             }
             if !isBangumi {
-                let playInfo = try await WebRequest.requestPlayerInfo(aid: aid, cid: cid == 0 ? data.View.cid : cid)
+                let playInfo = try? await WebRequest.requestPlayerInfo(aid: aid, cid: cid == 0 ? data.View.cid : cid)
                 if cid == 0 {
-                    cid = playInfo.last_play_cid > 0 ? playInfo.last_play_cid : data.View.cid
+                    cid = playInfo?.last_play_cid ?? 0
+                    if cid <= 0 { cid = data.View.cid }
                 }
-                if playInfo.last_play_cid == cid, let page = data.View.pages?.first(where: { $0.cid == cid }) {
+                if let playInfo, playInfo.last_play_cid == cid {
                     playTimeInSecond = playInfo.playTimeInSecond
                     lastPlayCid = playInfo.last_play_cid
-                    lastPlayTitle = page.part
+                    lastPlayTitle = data.View.pages?.first(where: { $0.cid == cid })?.part
                 }
+            }
+            if let historyProgress,
+               historyProgress.cid == cid || (historyProgress.epid != nil && historyProgress.epid == epid) {
+                lastPlayCid = cid
+                playTimeInSecond = historyProgress.seconds
             }
             update(with: data)
         } catch let err {
@@ -480,8 +677,18 @@ class VideoDetailViewController: UIViewController {
         }
 
         WebRequest.requestReplys(aid: aid) { [weak self] replys in
-            self?.replys = replys
-            self?.replysCollectionView.reloadData()
+            guard let self else { return }
+            let pinned = replys.top_replies ?? replys.hots ?? []
+            self.displayedReplies = pinned + (replys.replies ?? []).filter { item in
+                !pinned.contains { $0.rpid == item.rpid }
+            }
+            let count = self.displayedReplies.count
+            let contentHeight = 84 + count * 80 + max(0, count - 1) * 8
+            self.commentsHeightConstraint?.constant = count == 0 ? 0 : min(CGFloat(contentHeight), 620)
+            self.replysCollectionView.reloadData()
+            self.replysCollectionView.setContentOffset(.zero, animated: false)
+            self.view.layoutIfNeeded()
+            self.commentsFadeMask.frame = self.commentsViewport.bounds
         }
 
         WebRequest.requestLikeStatus(aid: aid) { [weak self] isLiked in
@@ -522,6 +729,7 @@ class VideoDetailViewController: UIViewController {
                 aid = epi.aid
                 cid = epi.cid
                 pages = season.episodes.filter { $0.section_type == 0 }.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.ep_id, from: "", part: $0.index + " " + ($0.index_title ?? "")) })
+                episodeCovers = Dictionary(uniqueKeysWithValues: season.episodes.map { ($0.ep_id, $0.cover) })
 
                 let userEpisodeInfo = try await WebRequest.requestUserEpisodeInfo(epid: epi.ep_id)
 
@@ -565,28 +773,27 @@ class VideoDetailViewController: UIViewController {
 
         avatarImageView.kf.setImage(with: data.avatar(size: 240), options: [.processor(DownsamplingImageProcessor(size: CGSize(width: 80, height: 80))), .processor(RoundCornerImageProcessor(radius: .widthFraction(0.5))), .cacheSerializer(FormatIndicatedCacheSerializer.png)])
 
-        coverImageView.kf.setImage(with: data.pic)
-        backgroundImageView.kf.setImage(with: data.pic)
+        coverImageView.kf.setImage(with: data.pic, options: coverImageOptions)
+        if let pic = data.pic {
+            backgroundImageView.kf.setImage(with: pic, options: coverImageOptions)
+        }
+        finishLoading()
         recommandCollectionView.superview?.isHidden = data.Related.count == 0
 
-        var notes = [String]()
+        let description = data.View.desc ?? ""
         let status = data.View.dynamic ?? ""
-        if status.count > 1, status != data.View.desc {
-            notes.append(status)
-        }
-        notes.append(data.View.desc ?? "")
-        if notes.count > 1 {
-            noteView.label.text = notes.joined(separator: "\n")
-        } else {
-            noteView.alpha = 0
-            noteViewHeight.constant = 1
-        }
+        let notes = [status != description ? status : "", description].filter { !$0.isEmpty }
+        noteView.label.text = notes.joined(separator: "\n")
+        noteView.alpha = notes.isEmpty ? 0 : 1
+        noteViewHeight.constant = notes.isEmpty ? 1 : 60
         if !isBangumi {
             pages = data.View.pages ?? []
+            seasons = []
         }
+        updateSeasonView()
         updatePageRanges()
         pageRangeCollectionView.reloadData()
-        if pages.count > 1 {
+        if pages.count > 1 || seasons.count > 1 {
             pageCollectionView.reloadData()
             pageView.isHidden = false
             let index = pages.firstIndex { $0.cid == cid } ?? 0
@@ -595,13 +802,6 @@ class VideoDetailViewController: UIViewController {
                 cid = pages.first?.cid ?? 0
             }
         }
-        loadingView.stopAnimating()
-        loadingView.removeFromSuperview()
-        effectContainerView.isHidden = false
-        UIView.animate(withDuration: 0.25) {
-            self.backgroundImageView.alpha = 1
-        }
-
         if let season = data.View.ugc_season {
             if season.sections.count > 1 {
                 if let section = season.sections.first(where: { section in section.episodes.contains(where: { episode in episode.aid == data.View.aid }) }) {
@@ -620,6 +820,8 @@ class VideoDetailViewController: UIViewController {
         }
 
         recommandCollectionView.reloadData()
+        directPlayDataReady = true
+        startDirectPlaybackIfReady()
     }
 
     @IBAction func actionShowUpSpace(_ sender: Any) {
@@ -636,15 +838,16 @@ class VideoDetailViewController: UIViewController {
     }
 
     @IBAction func actionPlay(_ sender: Any) {
-        let player = VideoPlayerViewController(playInfo: PlayInfo(aid: aid, cid: cid, epid: epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: data?.title))
+        let player = VideoPlayerViewController(playInfo: PlayInfo(aid: aid, cid: cid, epid: epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: data?.title, coverURL: data?.pic))
         player.data = data
+        player.initialCoverImage = backgroundImageView.image
         if pages.count > 0, let index = pages.firstIndex(where: { $0.cid == cid }) {
-            let seq = pages.map({ PlayInfo(aid: aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part) })
+            let seq = pages.map({ PlayInfo(aid: isBangumi ? $0.page : aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part, coverURL: $0.epid.flatMap { episodeCovers[$0] } ?? data?.pic) })
             if seq.count > 0 {
                 player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: index)
             }
         }
-        if allUgcEpisodes.count > 0, let index = allUgcEpisodes.firstIndex(where: { $0.cid == cid }) {
+        if !isBangumi, allUgcEpisodes.count > 0, let index = allUgcEpisodes.firstIndex(where: { $0.cid == cid }) {
             let seq = allUgcEpisodes.map({ PlayInfo(aid: $0.aid, cid: $0.cid, title: $0.title) })
             if seq.count > 0 {
                 player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: index)
@@ -703,10 +906,11 @@ class VideoDetailViewController: UIViewController {
     }
 
     @IBAction func actionFavorite(_ sender: Any) {
-        Task {
+        Task { [weak self] in
             guard let favList = try? await WebRequest.requestFavVideosList() else {
                 return
             }
+            guard let self else { return }
             if favButton.isOn {
                 favButton.title? -= 1
                 favButton.isOn = false
@@ -734,6 +938,13 @@ class VideoDetailViewController: UIViewController {
 }
 
 extension VideoDetailViewController: UICollectionViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView === self.scrollView,
+              keepsInitialScrollPosition,
+              scrollView.contentOffset.y != 0 else { return }
+        scrollView.setContentOffset(.zero, animated: false)
+    }
+
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         animateTopImage(isAnimateToTop: false)
         switch collectionView {
@@ -742,17 +953,19 @@ extension VideoDetailViewController: UICollectionViewDelegate {
             pageCollectionView.scrollToItem(at: IndexPath(item: range.startIndex, section: 0), at: .left, animated: true)
         case pageCollectionView:
             let page = pages[indexPath.item]
-            let player = VideoPlayerViewController(playInfo: PlayInfo(aid: isBangumi ? page.page : aid, cid: page.cid, epid: page.epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: page.part))
+            let player = VideoPlayerViewController(playInfo: PlayInfo(aid: isBangumi ? page.page : aid, cid: page.cid, epid: page.epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: page.part, coverURL: page.epid.flatMap { episodeCovers[$0] } ?? data?.pic))
+            player.initialCoverImage = backgroundImageView.image
             player.data = isBangumi ? nil : data
 
-            let seq = pages.map({ PlayInfo(aid: isBangumi ? $0.page : aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part) })
+            let seq = pages.map({ PlayInfo(aid: isBangumi ? $0.page : aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part, coverURL: $0.epid.flatMap { episodeCovers[$0] } ?? data?.pic) })
             if seq.count > 0 {
                 player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: indexPath.item)
             }
             present(player, animated: true, completion: nil)
         case replysCollectionView:
-            guard let reply = replys?.replies?[indexPath.item] else { return }
-            let detail = ReplyDetailViewController(reply: reply)
+            guard displayedReplies.indices.contains(indexPath.item) else { return }
+            let reply = displayedReplies[indexPath.item]
+            let detail = ReplyDetailViewController(reply: reply, aid: aid)
             present(detail, animated: true)
         case ugcCollectionView:
             let video = allUgcEpisodes[indexPath.item]
@@ -787,7 +1000,7 @@ extension VideoDetailViewController: UICollectionViewDelegate {
                     self.coverImageViewTop.constant = -630
                     self.topInfoViewHeight.constant = 420
                 } else {
-                    self.topInfoViewHeight.constant = 820
+                    self.topInfoViewHeight.constant = 1020
                     self.coverImageViewTop.constant = 0
                     scrollView.setContentOffset(.zero, animated: false)
                 }
@@ -806,7 +1019,7 @@ extension VideoDetailViewController: UICollectionViewDataSource {
         case pageCollectionView:
             return pages.count
         case replysCollectionView:
-            return replys?.replies?.count ?? 0
+            return displayedReplies.count
         case ugcCollectionView:
             return allUgcEpisodes.count
         case recommandCollectionView:
@@ -823,9 +1036,10 @@ extension VideoDetailViewController: UICollectionViewDataSource {
             cell.titleLabel.text = pageRanges[indexPath.item].title
             return cell
         case pageCollectionView:
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BLTextOnlyCollectionViewCell", for: indexPath) as! BLTextOnlyCollectionViewCell
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self), for: indexPath) as! RelatedVideoCell
             let page = pages[indexPath.item]
-            cell.titleLabel.text = page.part
+            cell.update(data: EpisodeCardData(title: page.part,
+                                              pic: page.epid.flatMap { episodeCovers[$0] } ?? data?.pic))
             cell.didSelect = { [weak self] isFocused in
                 if isFocused {
                     self?.animateTopImage(isAnimateToTop: true)
@@ -834,9 +1048,7 @@ extension VideoDetailViewController: UICollectionViewDataSource {
             return cell
         case replysCollectionView:
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CompactReplyCell.identifier, for: indexPath) as! CompactReplyCell
-            if let reply = replys?.replies?[indexPath.item] {
-                cell.config(replay: reply)
-            }
+            cell.config(replay: displayedReplies[indexPath.item])
             return cell
         case ugcCollectionView:
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self), for: indexPath) as! RelatedVideoCell
@@ -884,7 +1096,7 @@ extension VideoDetailViewController {
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
                                                   heightDimension: .fractionalHeight(1.0))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
-            let groupSize = NSCollectionLayoutSize(widthDimension: .absolute(300), heightDimension: .absolute(150))
+            let groupSize = NSCollectionLayoutSize(widthDimension: .absolute(400), heightDimension: .absolute(300))
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
             let section = NSCollectionLayoutSection(group: group)
             section.orthogonalScrollingBehavior = .continuous
@@ -928,10 +1140,10 @@ extension VideoDetailViewController {
         let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
                                                             heightDimension: .fractionalHeight(1)))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                       heightDimension: .absolute(108)),
+                                                                       heightDimension: .absolute(80)),
                                                        subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = .init(top: 12, leading: 100, bottom: 12, trailing: 100)
+        section.contentInsets = .init(top: 72, leading: 100, bottom: 12, trailing: 100)
         section.interGroupSpacing = 8
         return UICollectionViewCompositionalLayout(section: section)
     }
@@ -941,18 +1153,37 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
     var didSelect: ((_ isFocused: Bool) -> Void)?
     let titleLabel = MarqueeLabel()
     let imageView = UIImageView()
+    private let focusHaloView = UIView()
+    private let focusGlassView = UIVisualEffectView()
     override func setup() {
         super.setup()
+        scaleFactor = prominentFocusScale
+        focusHaloView.backgroundColor = UIColor.white.withAlphaComponent(0.25)
+        focusHaloView.layer.cornerRadius = normailSornerRadius
+        focusHaloView.layer.shadowColor = UIColor.white.cgColor
+        focusHaloView.layer.shadowOpacity = 0
+        focusHaloView.layer.shadowRadius = 24
+        focusHaloView.layer.shadowOffset = .zero
+        contentView.addSubview(focusHaloView)
         contentView.addSubview(imageView)
         contentView.addSubview(titleLabel)
         imageView.snp.makeConstraints { make in
             make.top.left.right.equalToSuperview()
             make.width.equalTo(imageView.snp.height).multipliedBy(16.0 / 9)
         }
+        focusHaloView.snp.makeConstraints { make in
+            make.edges.equalTo(imageView)
+        }
         imageView.layer.cornerRadius = normailSornerRadius
         imageView.clipsToBounds = true
         imageView.contentMode = .scaleAspectFill
-        imageView.adjustsImageWhenAncestorFocused = true
+        imageView.adjustsImageWhenAncestorFocused = false
+        focusGlassView.isUserInteractionEnabled = false
+        focusGlassView.alpha = 0
+        imageView.addSubview(focusGlassView)
+        focusGlassView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
         titleLabel.snp.makeConstraints { make in
             make.left.equalToSuperview().offset(12)
             make.right.equalToSuperview().offset(-12)
@@ -975,6 +1206,17 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
 
     override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         super.didUpdateFocus(in: context, with: coordinator)
+        coordinator.addCoordinatedAnimations {
+            self.focusHaloView.layer.shadowOpacity = self.isFocused ? 0.65 : 0
+        }
+        if isFocused {
+            if #available(tvOS 26.0, *) {
+                focusGlassView.effect = UIGlassEffect(style: .clear)
+            } else {
+                focusGlassView.effect = UIBlurEffect(style: .light)
+            }
+        }
+        focusGlassView.alpha = isFocused ? 0.3 : 0
         didSelect?(isFocused)
         if isFocused {
             startScroll()
@@ -995,6 +1237,8 @@ class RelatedVideoCell: BLMotionCollectionViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        focusHaloView.layer.shadowOpacity = 0
+        focusGlassView.alpha = 0
         stopScroll()
     }
 }

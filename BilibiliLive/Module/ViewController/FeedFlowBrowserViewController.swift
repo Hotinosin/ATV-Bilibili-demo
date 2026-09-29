@@ -52,13 +52,6 @@ class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol
         return collectionView
     }()
 
-    private let listTitleLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 42, weight: .bold)
-        label.textColor = .white
-        return label
-    }()
-
     private let previewHostView: UIView = {
         let view = UIView()
         view.backgroundColor = .black
@@ -215,7 +208,6 @@ class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol
         focusedIndex = 0
         lastPlayedItemIdentity = nil
         configureSequenceProvider(with: [])
-        listTitleLabel.text = dataSource.title
         listCollectionView.reloadData()
         emptyStateLabel.isHidden = true
         previewHintLabel.text = dataSource.defaultPreviewHintText
@@ -368,16 +360,10 @@ class FeedFlowBrowserViewController: UIViewController, BLTabBarContentVCProtocol
             make.height.equalToSuperview().multipliedBy(0.35)
         }
 
-        view.addSubview(listTitleLabel)
         view.addSubview(listCollectionView)
 
-        listTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(80)
-            make.leading.equalToSuperview().offset(120)
-        }
-
         listCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(listTitleLabel.snp.bottom).offset(18)
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(170)
             make.leading.equalToSuperview().offset(108)
             make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).offset(-24)
             make.width.equalTo(470)

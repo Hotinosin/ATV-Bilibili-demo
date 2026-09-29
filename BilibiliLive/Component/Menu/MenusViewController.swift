@@ -10,6 +10,26 @@ import Kingfisher
 import SwiftyJSON
 import UIKit
 
+private final class AccountHeaderControl: UIControl {
+    weak var titleLabel: UILabel?
+    override var canBecomeFocused: Bool { true }
+
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        coordinator.addCoordinatedAnimations {
+            self.backgroundColor = self.isFocused ? .white : .clear
+            self.titleLabel?.textColor = self.isFocused ? .black : UIColor(named: "titleColor")
+        }
+    }
+
+    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        super.pressesEnded(presses, with: event)
+        if presses.contains(where: { $0.type == .select }) {
+            sendActions(for: .primaryActionTriggered)
+        }
+    }
+}
+
 class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     private enum FocusDestination {
         case menu
@@ -34,6 +54,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     private var menuRecognizer: UITapGestureRecognizer?
     private var selectMenuItem: CellModel?
     private let focusToMenuView = FocusToMenuView()
+    private let accountButton = AccountHeaderControl()
     private var focusDestination = FocusDestination.menu
 
     @IBOutlet var menusView: UIView! {
@@ -70,6 +91,8 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
     @IBOutlet var collectionTop: NSLayoutConstraint!
     @IBOutlet var headViewLeading: NSLayoutConstraint!
     @IBOutlet var headingViewTop: NSLayoutConstraint!
+    @IBOutlet var accountHeaderHeight: NSLayoutConstraint!
+    @IBOutlet var avatarWidth: NSLayoutConstraint!
 
     @IBOutlet var menuViewWidth: NSLayoutConstraint!
 
@@ -82,8 +105,18 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         super.viewDidLoad()
         setupData()
         leftCollectionView.reloadData()
-        avatarImageView.layer.cornerRadius = avatarImageView.frame.size.width / 2
         leftCollectionView.register(BLMenuLineCollectionViewCell.self, forCellWithReuseIdentifier: "cell")
+        accountButton.layer.cornerRadius = 26
+        accountButton.isHidden = true
+        accountButton.accessibilityLabel = "账号，退出登录"
+        accountButton.titleLabel = usernameLabel
+        accountButton.addTarget(self, action: #selector(actionLogout), for: .primaryActionTriggered)
+        if let header = avatarImageView.superview {
+            header.insertSubview(accountButton, at: 0)
+            accountButton.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+        }
         leftCollectionView.selectItem(at: IndexPath(row: 0, section: 0), animated: false, scrollPosition: .top)
         collectionView(leftCollectionView, didSelectItemAt: IndexPath(row: 0, section: 0))
         contentView.addSubview(focusToMenuView)
@@ -126,6 +159,11 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         super.viewDidAppear(animated)
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        avatarImageView.layer.cornerRadius = avatarImageView.bounds.width / 2
+    }
+
     @objc func handleMenuPress() {
         NotificationCenter.default.post(name: EVENT_COLLECTION_TO_TOP, object: nil)
     }
@@ -159,6 +197,9 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                     self.menusViewHeight.constant = 1020
                     self.headViewLeading.constant = 20
                     self.headingViewTop.constant = 20
+                    self.accountHeaderHeight.constant = 64
+                    self.avatarWidth.constant = 60
+                    self.usernameLabel.font = .systemFont(ofSize: 26, weight: .semibold)
                     self.menuViewWidth.constant = 320
                     self.updateMenuCornerRadius(bigSornerRadius)
 
@@ -183,6 +224,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                         self.usernameLabel.alpha = 1
                     }
                     self.menuIsShowing = true
+                    self.accountButton.isHidden = false
                     self.view.setNeedsFocusUpdate()
                     self.view.updateFocusIfNeeded()
                 }
@@ -200,10 +242,13 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
 
             // 缩回布局
             self.collectionTop.constant = 0
-            self.menusViewHeight.constant = 60
-            self.headViewLeading.constant = 5
-            self.headingViewTop.constant = 5
-            self.menuViewWidth.constant = 180
+            self.menusViewHeight.constant = 64
+            self.headViewLeading.constant = 16
+            self.headingViewTop.constant = 7
+            self.accountHeaderHeight.constant = 50
+            self.avatarWidth.constant = 50
+            self.usernameLabel.font = .systemFont(ofSize: 22, weight: .semibold)
+            self.menuViewWidth.constant = 200
             self.updateMenuCornerRadius(30)
 
             // 模糊阴影逐渐减弱
@@ -226,6 +271,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                 self.usernameLabel.alpha = 1
             }
             self.menuIsShowing = false
+            self.accountButton.isHidden = true
 
             if focusContent {
                 self.focusDestination = .content
@@ -264,42 +310,53 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         followsViewController.isShowTopCover = {
             false
         }
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "person.crop.circle.badge.checkmark"), title: "关注", contentVC: followsViewController))
+        let followingViewController = SegmentViewController()
+        followingViewController.categories = [
+            .init(title: "更新", contentVC: followsViewController),
+            .init(title: "正在直播", contentVC: LiveViewController()),
+            .init(title: "关注UP", contentVC: FollowUpsViewController()),
+        ]
 
-        let feedViewController = FeedViewController()
-        feedViewController.collectionVC.reservesSidebarSpace = true
-        let tvRecommendViewController = TVRecommendViewController()
-        tvRecommendViewController.collectionVC.reservesSidebarSpace = true
-        let recommendationViewController = CategoryViewController()
-        recommendationViewController.contentExtendsUnderTopSafeArea = true
+        let feedViewController = MobileRecommendViewController()
+        feedViewController.collectionVC.showHeader = false
+        let tvRecommendViewController = WebRecommendViewController()
+        tvRecommendViewController.collectionVC.showHeader = false
+        let recommendationViewController = SegmentViewController()
         recommendationViewController.categories = [
-            .init(title: "推荐", contentVC: feedViewController),
-            .init(title: "TV推荐", contentVC: tvRecommendViewController),
+            .init(title: "网页端推荐", contentVC: tvRecommendViewController),
+            .init(title: "移动端推荐", contentVC: feedViewController),
             .init(title: "沉浸推荐", contentVC: FeaturedBrowserViewController()),
         ]
         cellModels.append(CellModel(iconImage: UIImage(systemName: "timelapse"), title: "推荐", contentVC: recommendationViewController))
-
-        let historyViewController = HistoryViewController()
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "clock.fill"), title: "历史记录", contentVC: historyViewController))
-
-        let HotViewController = HotViewController()
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "livephoto.play"), title: "热门", contentVC: HotViewController))
-
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "theatermasks.circle"), title: "排行榜", contentVC: RankingViewController()))
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "infinity.circle"), title: "直播", contentVC: LiveViewController()))
-
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "person.crop.circle.badge.checkmark"), title: "关注", contentVC: followingViewController))
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "play.tv"), title: "影视", contentVC: CinemaViewController()))
         cellModels.append(CellModel(iconImage: UIImage(systemName: "star.circle"), title: "收藏", contentVC: FavoriteViewController()))
 
-        let logout = CellModel(iconImage: UIImage(systemName: "magnifyingglass.circle"), title: "搜索", autoSelect: false) {
+        let historyViewController = SegmentViewController()
+        historyViewController.categories = [
+            .init(title: "历史记录", contentVC: HistoryViewController()),
+            .init(title: "稍后再看", contentVC: ToViewViewController()),
+        ]
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "clock.fill"), title: "历史", contentVC: historyViewController))
+
+        let search = CellModel(iconImage: UIImage(systemName: "magnifyingglass.circle"), title: "搜索", autoSelect: false) {
             [weak self] in
-//            self?.actionLogout()
             let resultVC = SearchResultViewController()
             let searchVC = UISearchController(searchResultsController: resultVC)
             searchVC.searchResultsUpdater = resultVC
             self?.present(UISearchContainerViewController(searchController: searchVC), animated: true)
         }
-        cellModels.append(logout)
-        cellModels.append(CellModel(iconImage: UIImage(systemName: "gear"), title: "设置", contentVC: PersonalViewController.create()))
+        cellModels.append(search)
+
+        let hotViewController = SegmentViewController()
+        hotViewController.categories = [
+            .init(title: "热门视频", contentVC: HotViewController()),
+            .init(title: "每周必看", contentVC: WeeklyWatchViewController()),
+        ]
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "livephoto.play"), title: "热门", contentVC: hotViewController))
+
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "theatermasks.circle"), title: "排行榜", contentVC: RankingViewController()))
+        cellModels.append(CellModel(iconImage: UIImage(systemName: "gear"), title: "设置", contentVC: SettingsViewController()))
     }
 
     func setViewController(vc: UIViewController, isHiddenMenus: Bool = true) {
@@ -323,7 +380,7 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
         (currentViewController as? BLTabBarContentVCProtocol)?.reloadData()
     }
 
-    func actionLogout() {
+    @objc func actionLogout() {
         let alert = UIAlertController(title: "确定登出？", message: nil, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "确定", style: .default) {
             _ in
@@ -333,7 +390,9 @@ class MenusViewController: UIViewController, BLTabBarContentVCProtocol {
                 }
             }
         })
-        alert.addAction(UIAlertAction(title: "取消", style: .cancel))
+        let cancel = UIAlertAction(title: "取消", style: .cancel)
+        alert.addAction(cancel)
+        alert.preferredAction = cancel
         present(alert, animated: true)
     }
 
@@ -354,7 +413,7 @@ extension MenusViewController: UICollectionViewDataSource {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! BLMenuLineCollectionViewCell
         cell.titleLabel.text = cellModels[indexPath.item].title
         if let icon = cellModels[indexPath.item].iconImage {
-            cell.iconImageView.image = icon
+            cell.iconImageView.image = icon.withRenderingMode(.alwaysTemplate)
         }
         return cell
     }
@@ -369,7 +428,8 @@ extension MenusViewController: UICollectionViewDelegate {
                         shouldUpdateFocusIn context: UICollectionViewFocusUpdateContext) -> Bool
     {
         let isLeavingMenu = context.previouslyFocusedIndexPath != nil && context.nextFocusedIndexPath == nil
-        if isLeavingMenu && !context.focusHeading.contains(.right) {
+        let movesToAccount = context.focusHeading.contains(.up) && context.nextFocusedView === accountButton
+        if isLeavingMenu && !context.focusHeading.contains(.right) && !movesToAccount {
             return false
         }
         return true
@@ -387,7 +447,9 @@ extension MenusViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didUpdateFocusIn context: UICollectionViewFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
         // 检查新的焦点是否是UICollectionViewCell，失去焦点后隐藏菜单
         guard context.nextFocusedIndexPath != nil else {
-            hiddenMenus()
+            if context.nextFocusedView !== accountButton {
+                hiddenMenus()
+            }
             return
         }
     }

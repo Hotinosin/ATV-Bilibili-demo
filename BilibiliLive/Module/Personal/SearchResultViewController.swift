@@ -85,7 +85,7 @@ class SearchResultViewController: UIViewController {
                     currentSnapshot.appendSections([list])
                     currentSnapshot.appendItems(data.map { .bangumi($0) }, toSection: list)
                 case let .movie(data):
-                    let list = SearchList(title: "影视", height: defaultHeight, scrollingBehavior: .none)
+                    let list = SearchList(title: "影视", height: .absolute(Settings.displayStyle.heightEstimated), scrollingBehavior: .none)
                     currentSnapshot.appendSections([list])
                     currentSnapshot.appendItems(data.map { .bangumi($0) }, toSection: list)
                 case let .user(data):
@@ -125,8 +125,9 @@ extension SearchResultViewController {
                     let hSpacing: CGFloat = Settings.displayStyle == .large ? 35 : 30
                     item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: hSpacing, bottom: 0, trailing: hSpacing)
                     let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-                    group.edgeSpacing = .init(leading: .fixed(0), top: .fixed(40), trailing: .fixed(0), bottom: .fixed(-60))
+                    group.edgeSpacing = .init(leading: .fixed(0), top: .fixed(Settings.displayStyle.vSpacing), trailing: .fixed(0), bottom: .fixed(0))
                     section = NSCollectionLayoutSection(group: group)
+                    section.interGroupSpacing = Settings.displayStyle.vSpacing
                 } else {
                     let groupSize = NSCollectionLayoutSize(widthDimension: sectionIdentifier.width,
                                                            heightDimension: sectionIdentifier.height)

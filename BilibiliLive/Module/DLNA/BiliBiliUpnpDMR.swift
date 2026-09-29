@@ -34,17 +34,17 @@ class BiliBiliUpnpDMR: NSObject {
 
     private lazy var serverInfo: String = {
         let file = Bundle.main.url(forResource: "DLNAInfo", withExtension: "xml")!
-        return try! String(contentsOf: file).replacingOccurrences(of: "{{UUID}}", with: bUuid)
+        return try! String(contentsOf: file, encoding: .utf8).replacingOccurrences(of: "{{UUID}}", with: bUuid)
     }()
 
     private lazy var nirvanaControl: String = {
         let file = Bundle.main.url(forResource: "NirvanaControl", withExtension: "xml")!
-        return try! String(contentsOf: file)
+        return try! String(contentsOf: file, encoding: .utf8)
     }()
 
     private lazy var avTransportScpd: String = {
         let file = Bundle.main.url(forResource: "AvTransportScpd", withExtension: "xml")!
-        return try! String(contentsOf: file)
+        return try! String(contentsOf: file, encoding: .utf8)
     }()
 
     private lazy var bUuid: String = {
@@ -118,7 +118,7 @@ class BiliBiliUpnpDMR: NSObject {
         httpServer["/debug/log"] = {
             req in
             if let path = Logger.latestLogPath(),
-               let str = try? String(contentsOf: URL(fileURLWithPath: path))
+               let str = try? String(contentsOf: URL(fileURLWithPath: path), encoding: .utf8)
             {
                 return HttpResponse.ok(.text(str))
             }

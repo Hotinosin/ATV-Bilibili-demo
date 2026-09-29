@@ -16,9 +16,33 @@ class ReplyDetailViewController: UIViewController {
     private var buttonStackView: UIStackView!
 
     private let reply: Replys.Reply
+    private let aid: Int
+    private var childReplies: [Replys.Reply]
+    private var nextPage = 1
+    private var isLoadingReplies = false
+    private var hasMoreReplies = true
 
-    init(reply: Replys.Reply) {
+    private var replyWidth: CGFloat { max(view.bounds.width, UIScreen.main.bounds.width) - 270 }
+
+    private func replyHeight(_ reply: Replys.Reply, width: CGFloat) -> CGFloat {
+        let textWidth = max(200, width - 790)
+        let textHeight = (reply.content.message as NSString).boundingRect(
+            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: UIFont.systemFont(ofSize: 24)], context: nil
+        ).height
+        return max(132, ceil(textHeight) + 40)
+    }
+
+    private var repliesHeight: CGFloat {
+        childReplies.reduce(0) { $0 + replyHeight($1, width: replyWidth) } +
+            CGFloat(max(0, childReplies.count - 1)) * 8
+    }
+
+    init(reply: Replys.Reply, aid: Int) {
         self.reply = reply
+        self.aid = aid
+        self.childReplies = reply.replies ?? []
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -30,8 +54,12 @@ class ReplyDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        view.backgroundColor = UIColor(named: "mainBgColor") ?? .black
+        view.isOpaque = true
+
         setUpViews()
         rootReplyCell.config(replay: reply)
+        loadMoreReplies()
 
         reply.content.pictures?.compactMap { URL(string: $0.img_src) }.forEach { url in
             let imageView = UIImageView()
@@ -44,8 +72,9 @@ class ReplyDetailViewController: UIViewController {
         }
 
         reply.content.jump_url?.forEach { url, jump in
-            Task {
+            Task { [weak self] in
                 guard let bvId = await ReplyUrlBVParser.parser(url: url) else { return }
+                guard let self else { return }
                 let button = BLCustomTextButton()
                 button.title = jump.title
                 button.onPrimaryAction = { [weak self] _ in
@@ -56,12 +85,36 @@ class ReplyDetailViewController: UIViewController {
         }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        view.layoutIfNeeded()
+    }
+
     // MARK: - Private
 
     private func jumpLink(bvid: String) {
         let aid = BvidConvertor.bv2av(bvid: bvid)
         let detailVC = VideoDetailViewController.create(aid: Int(aid), cid: nil)
         detailVC.present(from: self)
+    }
+
+    private func loadMoreReplies() {
+        guard let root = reply.rpid, hasMoreReplies, !isLoadingReplies else { return }
+        isLoadingReplies = true
+        WebRequest.requestChildReplies(aid: aid, root: root, page: nextPage) { [weak self] result in
+            guard let self else { return }
+            self.isLoadingReplies = false
+            guard case let .success(data) = result else { return }
+            let pageReplies = data.replies ?? []
+            if self.nextPage == 1 { self.childReplies.removeAll() }
+            self.childReplies.append(contentsOf: pageReplies)
+            self.hasMoreReplies = pageReplies.count == 20
+            self.nextPage += 1
+            self.replyCollectionView.snp.updateConstraints { make in
+                make.height.equalTo(self.repliesHeight)
+            }
+            self.replyCollectionView.reloadData()
+        }
     }
 
     private func setUpViews() {
@@ -71,6 +124,7 @@ class ReplyDetailViewController: UIViewController {
             scroll.snp.makeConstraints { make in
                 make.edges.equalToSuperview()
             }
+            scroll.delegate = self
             return scroll
         }()
 
@@ -100,11 +154,12 @@ class ReplyDetailViewController: UIViewController {
 
         rootReplyCell = {
             let cell = CompactReplyCell(frame: .zero)
+            cell.showsFullText = true
             contentView.addSubview(cell)
             cell.snp.makeConstraints { make in
                 make.top.equalTo(self.titleLabel.snp.bottom).offset(60)
                 make.leading.trailing.equalToSuperview().inset(100)
-                make.height.equalTo(108)
+                make.height.equalTo(self.replyHeight(self.reply, width: max(self.view.bounds.width, UIScreen.main.bounds.width) - 200))
             }
             return cell
         }()
@@ -139,15 +194,9 @@ class ReplyDetailViewController: UIViewController {
         }()
 
         replyCollectionView = {
-            let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                heightDimension: .fractionalHeight(1)))
-            let group = NSCollectionLayoutGroup.vertical(layoutSize: .init(widthDimension: .fractionalWidth(1),
-                                                                           heightDimension: .absolute(108)),
-                                                           subitems: [item])
-            let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = 8
-
-            let collectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout(section: section))
+            let layout = UICollectionViewFlowLayout()
+            layout.minimumLineSpacing = 8
+            let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
             contentView.addSubview(collectionView)
             collectionView.dataSource = self
             collectionView.delegate = self
@@ -157,9 +206,10 @@ class ReplyDetailViewController: UIViewController {
             collectionView.register(CompactReplyCell.self, forCellWithReuseIdentifier: CompactReplyCell.identifier)
 
             collectionView.snp.makeConstraints { make in
-                make.leading.trailing.equalToSuperview().inset(100)
+                make.leading.equalToSuperview().inset(170)
+                make.trailing.equalToSuperview().inset(100)
                 make.top.equalTo(self.buttonStackView.snp.bottom).offset(32)
-                make.height.equalTo((self.reply.replies?.count ?? 0) * 116)
+                make.height.equalTo(self.repliesHeight)
                 make.bottom.equalToSuperview().inset(60)
             }
 
@@ -168,9 +218,9 @@ class ReplyDetailViewController: UIViewController {
     }
 }
 
-extension ReplyDetailViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+extension ReplyDetailViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return reply.replies?.count ?? 0
+        return childReplies.count
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -178,19 +228,23 @@ extension ReplyDetailViewController: UICollectionViewDataSource, UICollectionVie
             fatalError("cell not found")
         }
 
-        guard let reply = reply.replies?[indexPath.row] else {
-            fatalError("reply not found")
-        }
-
-        cell.config(replay: reply)
+        let child = childReplies[indexPath.row]
+        cell.showsFullText = true
+        let target = ([reply] + childReplies).first { $0.rpid == child.parent }?.member.uname
+        cell.config(replay: child, replyTarget: child.content.message.hasPrefix("回复 @") ? nil : target)
 
         return cell
     }
 
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let reply = reply.replies?[indexPath.item] else { return }
-        let detail = ReplyDetailViewController(reply: reply)
-        present(detail, animated: true)
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout,
+                        sizeForItemAt indexPath: IndexPath) -> CGSize {
+        CGSize(width: replyWidth, height: replyHeight(childReplies[indexPath.item], width: replyWidth))
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView === self.scrollView,
+              scrollView.contentOffset.y + scrollView.bounds.height > scrollView.contentSize.height - 400 else { return }
+        loadMoreReplies()
     }
 }
 

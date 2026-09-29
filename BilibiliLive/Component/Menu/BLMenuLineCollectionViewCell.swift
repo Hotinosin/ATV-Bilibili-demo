@@ -18,7 +18,7 @@ class BLMenuLineCollectionViewCell: BLSettingLineCollectionViewCell {
         selectedWhiteView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-        selectedWhiteView.alpha = 0.7
+        selectedWhiteView.alpha = 1
         addSubview(iconImageView)
         let imageViewHeight = 32.0
         iconImageView.setCornerRadius(cornerRadius: imageViewHeight / 2.0)
@@ -44,7 +44,8 @@ class BLMenuLineCollectionViewCell: BLSettingLineCollectionViewCell {
 
     override func updateView() {
         selectedWhiteView.isHidden = !(isFocused || isSelected)
-        selectedWhiteView.backgroundColor = UIColor(named: "menuCellColor")
-        titleLabel.textColor = UIColor(named: "titleColor")
+        selectedWhiteView.backgroundColor = isFocused ? .white : UIColor(named: "menuCellColor")?.withAlphaComponent(0.7)
+        titleLabel.textColor = isFocused ? .black : UIColor(named: "titleColor")
+        iconImageView.tintColor = isFocused ? .black : UIColor(named: "titleColor")
     }
 }

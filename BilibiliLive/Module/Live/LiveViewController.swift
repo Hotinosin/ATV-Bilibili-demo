@@ -14,6 +14,9 @@ class LiveViewController: StandardVideoCollectionViewController<LiveRoom> {
         super.setupCollectionView()
         collectionVC.pageSize = 10
         reloadInterval = 15 * 60
+        collectionVC.showHeader = false
+        collectionVC.loadViewIfNeeded()
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
     }
 
     override func request(page: Int) async throws -> [LiveRoom] {

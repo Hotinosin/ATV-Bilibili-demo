@@ -15,7 +15,9 @@ class HistoryViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        collectionVC.showHeader = false
         collectionVC.show(in: self)
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
         collectionVC.didSelectToLastLeft = didSelectToLastLeft
         collectionVC.didSelect = {
             [weak self] in
@@ -24,7 +26,15 @@ class HistoryViewController: UIViewController {
     }
 
     func goDetail(with history: HistoryData) {
-        let detailVC = VideoDetailViewController.create(aid: history.aid, cid: history.cid ?? 0)
+        let detailVC: VideoDetailViewController
+        if let epId = history.bangumi?.ep_id, epId > 0 {
+            detailVC = VideoDetailViewController.create(epid: epId)
+        } else if let seasonId = history.bangumi?.season?.season_id, seasonId > 0 {
+            detailVC = VideoDetailViewController.create(seasonId: seasonId)
+        } else {
+            detailVC = VideoDetailViewController.create(aid: history.aid, cid: history.cid ?? 0)
+        }
+        detailVC.setHistoryProgress(history)
         detailVC.present(from: self)
     }
 

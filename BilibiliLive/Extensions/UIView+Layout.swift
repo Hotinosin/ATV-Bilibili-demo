@@ -7,6 +7,16 @@
 
 import UIKit
 
+let sornerRadius = 8.0
+let littleSornerRadius = 24.0
+let moreLittleSornerRadius = 18.0
+let normailSornerRadius = 25.0
+let lessBigSornerRadius = 35.0
+let bigSornerRadius = 45.0
+let compactFocusScale = 1.04
+let standardFocusScale = 1.06
+let prominentFocusScale = 1.08
+
 extension UIView {
     @discardableResult
     func makeConstraints(_ block: (UIView) -> [NSLayoutConstraint]) -> Self {

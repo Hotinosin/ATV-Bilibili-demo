@@ -11,10 +11,10 @@ import UIKit
 final class VideoPlayerDiscoveryInfoViewController: UIViewController {
     private enum Layout {
         static let cardWidth: CGFloat = 320
-        static let cardHeight: CGFloat = 248
-        static let sectionInsets = NSDirectionalEdgeInsets(top: 28, leading: 32, bottom: 28, trailing: 32)
+        static let cardHeight: CGFloat = 240
+        static let sectionInsets = NSDirectionalEdgeInsets(top: 20, leading: 32, bottom: 20, trailing: 32)
         static let interGroupSpacing: CGFloat = 28
-        static let preferredHeight: CGFloat = 360
+        static let preferredHeight: CGFloat = 280
     }
 
     struct Entry: Hashable {
@@ -50,6 +50,7 @@ final class VideoPlayerDiscoveryInfoViewController: UIViewController {
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
+        collectionView.clipsToBounds = false
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.remembersLastFocusedIndexPath = true
@@ -130,8 +131,6 @@ extension VideoPlayerDiscoveryInfoViewController: UICollectionViewDataSource, UI
         let entry = entries[indexPath.item]
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self),
                                                       for: indexPath) as! RelatedVideoCell
-        cell.imageView.adjustsImageWhenAncestorFocused = false
-        cell.scaleFactor = prominentFocusScale
         cell.update(data: entry.displayData)
         return cell
     }

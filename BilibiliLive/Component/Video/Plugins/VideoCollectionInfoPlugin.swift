@@ -48,10 +48,10 @@ private final class VideoCollectionInfoViewController: UIViewController {
         let item = NSCollectionLayoutItem(layoutSize: .init(widthDimension: .fractionalWidth(1),
                                                             heightDimension: .fractionalHeight(1)))
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: .init(widthDimension: .absolute(320),
-                                                                         heightDimension: .absolute(248)),
+                                                                         heightDimension: .absolute(240)),
                                                        subitems: [item])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = .init(top: 28, leading: 32, bottom: 28, trailing: 32)
+        section.contentInsets = .init(top: 20, leading: 32, bottom: 20, trailing: 32)
         section.interGroupSpacing = 28
         section.orthogonalScrollingBehavior = .continuousGroupLeadingBoundary
 
@@ -78,7 +78,7 @@ private final class VideoCollectionInfoViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        preferredContentSize = CGSize(width: 0, height: 360)
+        preferredContentSize = CGSize(width: 0, height: 280)
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -107,8 +107,6 @@ extension VideoCollectionInfoViewController: UICollectionViewDataSource, UIColle
         let episode = episodes[indexPath.item]
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: RelatedVideoCell.self),
                                                       for: indexPath) as! RelatedVideoCell
-        cell.imageView.adjustsImageWhenAncestorFocused = false
-        cell.scaleFactor = prominentFocusScale
         cell.update(data: episode)
         cell.alpha = 1
         return cell
@@ -117,7 +115,7 @@ extension VideoCollectionInfoViewController: UICollectionViewDataSource, UIColle
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let episode = episodes[indexPath.item]
         guard episode.aid != currentAid else { return }
-        onSelect?(PlayInfo(aid: episode.aid, cid: episode.cid, title: episode.title))
+        onSelect?(PlayInfo(aid: episode.aid, cid: episode.cid, title: episode.title, coverURL: episode.pic))
     }
 
     func indexPathForPreferredFocusedView(in collectionView: UICollectionView) -> IndexPath? {

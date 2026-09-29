@@ -31,8 +31,8 @@ class BLTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         liveVC.tabBarItem.title = "直播"
         vcs.append(liveVC)
 
-        let feedVC = FeedViewController()
-        feedVC.tabBarItem.title = "推荐"
+        let feedVC = MobileRecommendViewController()
+        feedVC.tabBarItem.title = "移动端推荐"
         vcs.append(feedVC)
 
         let hotVC = HotViewController()

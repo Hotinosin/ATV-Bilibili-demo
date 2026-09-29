@@ -97,9 +97,12 @@ class VideoPlayerViewModel {
             let (resolvedPlayInfo, data) = try await loadVideoInfo(for: requestedPlayInfo)
             guard !Task.isCancelled, loadGeneration == generation else { return }
 
+            await loadEpisodeSequenceIfNeeded(for: resolvedPlayInfo, detail: data.detail)
+            guard !Task.isCancelled, loadGeneration == generation else { return }
+
             let danmuProvider = VideoDanmuProvider(enableDanmuFilter: Settings.enableDanmuFilter,
                                                    enableDanmuRemoveDup: Settings.enableDanmuRemoveDup)
-            await danmuProvider.initVideo(cid: data.cid, startPos: data.playerStartPos ?? 0)
+            danmuProvider.prepareVideo(cid: data.cid, startPos: data.playerStartPos ?? 0)
             guard !Task.isCancelled, loadGeneration == generation else { return }
 
             playInfo = resolvedPlayInfo
@@ -111,6 +114,7 @@ class VideoPlayerViewModel {
                                                danmuProvider: danmuProvider)
             guard !Task.isCancelled, loadGeneration == generation else { return }
             loadResult.send(.success(plugins))
+            await danmuProvider.loadInitialDanmu(startPos: data.playerStartPos ?? 0)
         } catch is CancellationError {
             return
         } catch let err {
@@ -125,6 +129,48 @@ class VideoPlayerViewModel {
         let data = try await fetchVideoData(for: resolvedPlayInfo)
         try Task.checkCancellation()
         return (resolvedPlayInfo, data)
+    }
+
+    private func loadEpisodeSequenceIfNeeded(for playInfo: PlayInfo, detail: VideoDetail?) async {
+        guard playMode == .regular else { return }
+        if let sequenceProvider, sequenceProvider.count > 1 {
+            let belongsToCurrentVideo = sequenceProvider.playSeq.contains { $0.sequenceKey == playInfo.sequenceKey }
+            let isEpisodeSequence = playInfo.isBangumi
+                ? sequenceProvider.playSeq.allSatisfy { $0.seasonId == playInfo.seasonId }
+                : sequenceProvider.playSeq.allSatisfy { $0.aid == playInfo.aid }
+            if belongsToCurrentVideo && isEpisodeSequence { return }
+        }
+        sequenceProvider = nil
+        if !playInfo.isBangumi {
+            guard let pages = detail?.View.pages, pages.count > 1 else { return }
+            let episodes = pages.map { page in
+                PlayInfo(aid: playInfo.aid, cid: page.cid, title: page.part, coverURL: detail?.pic)
+            }
+            let currentIndex = pages.firstIndex(where: { $0.cid == playInfo.cid }) ?? 0
+            sequenceProvider = VideoSequenceProvider(seq: episodes, currentIndex: currentIndex)
+            return
+        }
+        guard let seasonId = playInfo.seasonId, seasonId > 0 else { return }
+        var episodes = [PlayInfo]()
+        if let season = try? await WebRequest.requestBangumiSeasonView(seasonID: seasonId) {
+            episodes = season.episodes.filter { $0.section_type == 0 }.map { episode in
+                PlayInfo(aid: episode.aid, cid: episode.cid, epid: episode.ep_id,
+                         seasonId: seasonId, subType: playInfo.subType,
+                         title: [episode.index, episode.index_title ?? ""].filter { !$0.isEmpty }.joined(separator: " "),
+                         coverURL: episode.cover)
+            }
+        }
+        if episodes.count < 2, let info = try? await WebRequest.requestBangumiInfo(seasonID: seasonId) {
+            episodes = info.episodes.map { episode in
+                PlayInfo(aid: episode.aid, cid: episode.cid, epid: episode.id,
+                         seasonId: seasonId, subType: playInfo.subType,
+                         title: [episode.title, episode.long_title].filter { !$0.isEmpty }.joined(separator: " "),
+                         coverURL: episode.cover)
+            }
+        }
+        guard episodes.count > 1 else { return }
+        let currentIndex = episodes.firstIndex(where: { $0.epid == playInfo.epid }) ?? 0
+        sequenceProvider = VideoSequenceProvider(seq: episodes, currentIndex: currentIndex)
     }
 
     private func fetchVideoDetail(aid: Int, existing: VideoDetail?) async -> VideoDetail? {
@@ -333,8 +379,8 @@ class VideoPlayerViewModel {
         // SpeedChangerPlugin creates the shared settings menu that later plugins extend.
         var plugins: [CommonPlayerPlugin] = [playSpeed, playplugin, danmu, upnp, debug, playlist]
 
-        if !data.isBangumi, let detail = data.detail {
-            let infoTabs = VideoPlayerInfoTabsPlugin(detail: detail,
+        if playMode == .regular || playMode == .feedFlow {
+            let infoTabs = VideoPlayerInfoTabsPlugin(detail: data.detail,
                                                      currentPlayInfo: playInfo,
                                                      sequenceProvider: sequenceProvider)
             infoTabs.onSelectDiscovery = { [weak self] info in
@@ -344,7 +390,7 @@ class VideoPlayerViewModel {
                     self?.onShowDetail?(info)
                 }
             }
-            plugins.append(infoTabs)
+            plugins.insert(infoTabs, at: 0)
         }
 
         // 添加画质选择器插件
@@ -365,7 +411,29 @@ class VideoPlayerViewModel {
                     self?.onShowDetail?(info)
                 }
             }
-            plugins.append(collection)
+            plugins.insert(collection, at: 0)
+        }
+
+        if playMode == .regular, let sequenceProvider, sequenceProvider.count > 1 {
+            let episodes = VideoEpisodeInfoPlugin(sequenceProvider: sequenceProvider, currentPlayInfo: playInfo)
+            episodes.onSelect = { [weak self] index in
+                guard let self, sequenceProvider.playSeq.indices.contains(index) else { return }
+                sequenceProvider.setCurrentIndex(index)
+                self.updatePlayInfo(sequenceProvider.playSeq[index])
+            }
+            episodes.onSelectSeason = { [weak self] seasonId in
+                guard let self, seasonId != self.playInfo.seasonId else { return }
+                Task { [weak self] in
+                    guard let self,
+                          let info = try? await WebRequest.requestBangumiInfo(seasonID: seasonId),
+                          let first = info.episodes.first else { return }
+                    self.updatePlayInfo(PlayInfo(aid: first.aid, cid: first.cid, epid: first.id,
+                                                 seasonId: seasonId, subType: self.playInfo.subType,
+                                                 title: [first.title, first.long_title].filter { !$0.isEmpty }.joined(separator: " "),
+                                                 coverURL: first.cover))
+                }
+            }
+            plugins.insert(episodes, at: 0)
         }
 
         if let clips = data.clips {
@@ -402,8 +470,10 @@ class VideoPlayerViewModel {
                 title = page.part
                 subTitle += "·\(detail.title)"
             }
-            let infoPlugin = BVideoInfoPlugin(title: title, subTitle: subTitle, desp: detail.View.desc, pic: detail.pic, viewPoints: data.playerInfo?.view_points)
-            plugins.append(infoPlugin)
+            let infoPlugin = BVideoInfoPlugin(title: title, subTitle: subTitle, desp: detail.View.desc,
+                                              pic: detail.pic,
+                                              viewPoints: data.playerInfo?.view_points)
+            plugins.insert(infoPlugin, at: 0)
             Logger.debug("updateInfoPlugin: title: \(title) subTitle: \(subTitle)")
         }
 

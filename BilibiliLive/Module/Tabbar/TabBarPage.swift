@@ -26,7 +26,7 @@ enum TabBarPage: String, CaseIterable, Codable {
         case .live:
             return "直播"
         case .feed:
-            return "推荐"
+            return "移动端推荐"
         case .hot:
             return "热门"
         case .ranking:

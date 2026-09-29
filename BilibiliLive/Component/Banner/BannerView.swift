@@ -99,7 +99,11 @@ struct BannerView: View {
                 viewModel.createDatas()
             } else {
                 Task {
-                    try await viewModel.loadFavList(isReset: false)
+                    do {
+                        try await viewModel.loadFavList(isReset: false)
+                    } catch {
+                        Logger.warn(error)
+                    }
                 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

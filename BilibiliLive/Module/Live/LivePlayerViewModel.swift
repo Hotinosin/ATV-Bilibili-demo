@@ -45,7 +45,8 @@ class LivePlayerViewModel {
         }
 
         onPluginReady?([playPlugin, debugPlugin])
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await refreshRoomsID()
                 try await initPlayer()
@@ -67,7 +68,7 @@ class LivePlayerViewModel {
                 }
             } catch let err {
                 await MainActor.run {
-                    onError?(String(describing: err))
+                    self.onError?(String(describing: err))
                 }
             }
         }

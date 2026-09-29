@@ -243,23 +243,10 @@
                                                                 </imageView>
                                                                 <visualEffectView opaque="NO" alpha="0.69999999999999996" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="dTL-sN-g5f">
                                                                     <rect key="frame" x="47" y="423" width="770" height="419"/>
-                                                                    <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="4Hl-m7-5O5">
-                                                                        <rect key="frame" x="0.0" y="0.0" width="770" height="419"/>
-                                                                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                                                        <subviews>
-                                                                            <visualEffectView opaque="NO" contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Rc0-K6-cuP">
-                                                                                <rect key="frame" x="0.0" y="0.0" width="530" height="293"/>
-                                                                                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                                                                <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="6yL-1s-sGp">
-                                                                                    <rect key="frame" x="0.0" y="0.0" width="530" height="293"/>
-                                                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                                                                </view>
-                                                                                <vibrancyEffect>
-                                                                                    <blurEffect style="regular"/>
-                                                                                </vibrancyEffect>
-                                                                            </visualEffectView>
-                                                                        </subviews>
-                                                                    </view>
+                                                                <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="4Hl-m7-5O5">
+                                                                    <rect key="frame" x="0.0" y="0.0" width="770" height="419"/>
+                                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                                                </view>
                                                                     <blurEffect style="dark"/>
                                                                 </visualEffectView>
                                                                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="top" spacing="22" translatesAutoresizingMaskIntoConstraints="NO" id="b1L-eO-cCc">
@@ -528,7 +515,7 @@
                                                                 <constraint firstAttribute="trailing" secondItem="rEZ-Qh-SKb" secondAttribute="trailing" id="Fbg-pC-yCk"/>
                                                                 <constraint firstItem="7DL-oi-ENm" firstAttribute="top" secondItem="rEZ-Qh-SKb" secondAttribute="top" id="HNP-Gh-sUk"/>
                                                                 <constraint firstItem="7DL-oi-ENm" firstAttribute="bottom" secondItem="rEZ-Qh-SKb" secondAttribute="bottom" id="Scy-48-6ic"/>
-                                                                <constraint firstItem="b1L-eO-cCc" firstAttribute="bottom" secondItem="dhb-ip-Zbb" secondAttribute="bottom" id="TcE-hC-JAo"/>
+                                                                <constraint firstItem="b1L-eO-cCc" firstAttribute="bottom" secondItem="dhb-ip-Zbb" secondAttribute="bottom" constant="-30" id="TcE-hC-JAo"/>
                                                                 <constraint firstItem="dTL-sN-g5f" firstAttribute="top" secondItem="kwE-Zo-p5T" secondAttribute="top" constant="-22" id="TcP-vr-MBV"/>
                                                                 <constraint firstItem="7DL-oi-ENm" firstAttribute="trailing" secondItem="rEZ-Qh-SKb" secondAttribute="trailing" id="To3-HV-Gqg"/>
                                                                 <constraint firstItem="b1L-eO-cCc" firstAttribute="leading" secondItem="dhb-ip-Zbb" secondAttribute="leading" id="XTP-xP-zTC"/>
@@ -538,7 +525,7 @@
                                                                 <constraint firstItem="rEZ-Qh-SKb" firstAttribute="top" secondItem="PqM-nB-5Uz" secondAttribute="top" id="ing-uJ-P9h"/>
                                                                 <constraint firstItem="b1L-eO-cCc" firstAttribute="centerY" secondItem="dTL-sN-g5f" secondAttribute="centerY" id="ld0-Gh-dWf"/>
                                                                 <constraint firstItem="rEZ-Qh-SKb" firstAttribute="leading" secondItem="PqM-nB-5Uz" secondAttribute="leading" id="wOB-tz-sdN"/>
-                                                                <constraint firstAttribute="height" constant="820" id="wv3-Je-RSu"/>
+                                                                <constraint firstAttribute="height" constant="1020" id="wv3-Je-RSu"/>
                                                             </constraints>
                                                         </view>
                                                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="JAA-Xe-yWz">
@@ -773,7 +760,6 @@
                                                     </subviews>
                                                     <constraints>
                                                         <constraint firstItem="PqM-nB-5Uz" firstAttribute="leading" secondItem="Yik-Sf-Vx3" secondAttribute="leading" id="Gjs-07-7yd"/>
-                                                        <constraint firstAttribute="height" constant="2986" id="soe-Rm-AXJ"/>
                                                     </constraints>
                                                 </stackView>
                                             </subviews>
@@ -815,6 +801,8 @@
                         <outlet property="backgroundImageView" destination="Kie-Aa-AFL" id="1Th-ka-RPV"/>
                         <outlet property="bvidLabel" destination="FZz-mh-DyL" id="K5q-Zd-Xur"/>
                         <outlet property="coinButton" destination="Olx-aY-Y43" id="a4a-wo-J4P"/>
+                        <outlet property="commentsSectionView" destination="eHx-jD-yrX" id="LqA-cS-vW1"/>
+                        <outlet property="commentsTitleLabel" destination="j7H-Ke-SYX" id="RkT-cT-vW2"/>
                         <outlet property="coverImageView" destination="rEZ-Qh-SKb" id="OqG-Sz-6Jv"/>
                         <outlet property="coverImageViewTop" destination="ing-uJ-P9h" id="SaV-X3-OVx"/>
                         <outlet property="danmakuLabel" destination="oQj-o5-WSc" id="d30-gB-b1Q"/>
@@ -920,7 +908,7 @@
                                     <constraint firstAttribute="height" constant="1020" id="cdy-7f-4eF"/>
                                     <constraint firstItem="0eB-dh-81B" firstAttribute="top" secondItem="qkE-m6-3T8" secondAttribute="top" constant="8" id="efn-Hi-6iT"/>
                                     <constraint firstAttribute="width" constant="320" id="faR-bX-hFT"/>
-                                    <constraint firstAttribute="trailing" secondItem="0eB-dh-81B" secondAttribute="trailing" id="nkK-4l-XPN"/>
+                                    <constraint firstAttribute="trailing" secondItem="0eB-dh-81B" secondAttribute="trailing" constant="20" id="nkK-4l-XPN"/>
                                     <constraint firstItem="0eB-dh-81B" firstAttribute="leading" secondItem="qkE-m6-3T8" secondAttribute="leading" constant="8" id="ufB-C9-25D"/>
                                 </constraints>
                             </view>
@@ -940,13 +928,15 @@
                             <constraint firstAttribute="bottom" secondItem="4s7-rJ-wsb" secondAttribute="bottom" id="BpF-yt-fGd"/>
                             <constraint firstItem="qkE-m6-3T8" firstAttribute="leading" secondItem="wTF-A4-NZi" secondAttribute="leading" constant="40" id="FEp-XX-6So"/>
                             <constraint firstItem="4s7-rJ-wsb" firstAttribute="leading" secondItem="wTF-A4-NZi" secondAttribute="leading" id="HKP-kR-67P"/>
-                            <constraint firstItem="W8N-VJ-RXm" firstAttribute="top" secondItem="wTF-A4-NZi" secondAttribute="top" constant="43" id="LIK-TV-CpP"/>
+                            <constraint firstItem="W8N-VJ-RXm" firstAttribute="top" secondItem="wTF-A4-NZi" secondAttribute="top" constant="45" id="LIK-TV-CpP"/>
                             <constraint firstItem="4s7-rJ-wsb" firstAttribute="top" secondItem="wTF-A4-NZi" secondAttribute="top" id="fcK-H6-2vM"/>
                             <constraint firstItem="W8N-VJ-RXm" firstAttribute="leading" secondItem="wTF-A4-NZi" secondAttribute="leading" constant="5" id="ihN-yg-yRH"/>
                         </constraints>
                     </view>
                     <connections>
                         <outlet property="avatarImageView" destination="qe8-VC-kWX" id="lBq-me-nqS"/>
+                        <outlet property="accountHeaderHeight" destination="Fes-EF-cfW" id="UrM-Oj-Ea2"/>
+                        <outlet property="avatarWidth" destination="vso-Cw-GvP" id="27a-C6-iqb"/>
                         <outlet property="collectionTop" destination="OVz-fc-9jH" id="Xds-SB-REp"/>
                         <outlet property="contentView" destination="4s7-rJ-wsb" id="2qL-R4-N8b"/>
                         <outlet property="headViewLeading" destination="ufB-C9-25D" id="VgB-wN-3DD"/>

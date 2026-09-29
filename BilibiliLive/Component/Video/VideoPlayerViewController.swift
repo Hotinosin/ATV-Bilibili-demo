@@ -7,6 +7,7 @@
 
 import AVKit
 import Combine
+import Kingfisher
 import UIKit
 
 struct PlayInfo: Hashable {
@@ -170,6 +171,7 @@ class VideoPlayerViewController: CommonPlayerViewController {
     }
 
     var data: VideoDetail?
+    var initialCoverImage: UIImage?
     var sequenceProvider: VideoSequenceProvider?
     var onLoadFailure: ((String) -> Void)?
     var onPlaybackStarted: (() -> Void)?
@@ -187,6 +189,8 @@ class VideoPlayerViewController: CommonPlayerViewController {
     private var hasRetriedCurrentItem = false
     private var isStopping = false
     private var pendingAutoTriggeredInfoActionKey: String?
+    private let loadingCoverView = UIImageView()
+    private var loadingIndicator: UIActivityIndicatorView?
 
     init(playInfo: PlayInfo,
          playMode: VideoPlayerMode = .regular,
@@ -224,6 +228,28 @@ class VideoPlayerViewController: CommonPlayerViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        if playMode != .preview, let overlay = playerContentOverlayView {
+            loadingCoverView.contentMode = .scaleAspectFill
+            loadingCoverView.clipsToBounds = true
+            loadingCoverView.image = initialCoverImage
+            if initialCoverImage == nil, let coverURL = viewModel.currentPlayInfo.coverURL ?? data?.pic {
+                loadingCoverView.kf.setImage(with: coverURL)
+            }
+            overlay.addSubview(loadingCoverView)
+            loadingCoverView.snp.makeConstraints { $0.edges.equalToSuperview() }
+            let blur = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            loadingCoverView.addSubview(blur)
+            blur.snp.makeConstraints { $0.edges.equalToSuperview() }
+            let shade = UIView()
+            shade.backgroundColor = UIColor.black.withAlphaComponent(0.48)
+            loadingCoverView.addSubview(shade)
+            shade.snp.makeConstraints { $0.edges.equalToSuperview() }
+            let indicator = UIActivityIndicatorView(style: .large)
+            indicator.startAnimating()
+            overlay.addSubview(indicator)
+            indicator.snp.makeConstraints { $0.center.equalToSuperview() }
+            loadingIndicator = indicator
+        }
         viewModel.sequenceProvider = sequenceProvider
         viewModel.onPlayInfoChanged = { [weak self] info in
             self?.handlePlayInfoChanged(info)
@@ -237,8 +263,7 @@ class VideoPlayerViewController: CommonPlayerViewController {
                 self?.handleLoadFailure(message: err)
             case let .success(plugins):
                 self?.neighborPreloadTask?.cancel()
-                self?.removeAllPlugins()
-                plugins.forEach { self?.addPlugin(plugin: $0) }
+                self?.replacePlugins(with: plugins)
                 self?.neighborPreloadTask = Task { [weak self] in
                     await self?.viewModel.preloadNeighborsIfNeeded()
                 }
@@ -297,6 +322,10 @@ class VideoPlayerViewController: CommonPlayerViewController {
     }
 
     override func playerDidStart(player: AVPlayer) {
+        loadingCoverView.isHidden = true
+        loadingIndicator?.stopAnimating()
+        loadingIndicator?.removeFromSuperview()
+        loadingIndicator = nil
         switch playMode {
         case .preview:
             onPlaybackStarted?()
@@ -321,6 +350,21 @@ class VideoPlayerViewController: CommonPlayerViewController {
     private func handlePlayInfoChanged(_ info: PlayInfo) {
         neighborPreloadTask?.cancel()
         neighborPreloadTask = nil
+        if playMode != .preview {
+            loadingCoverView.isHidden = false
+            loadingCoverView.kf.cancelDownloadTask()
+            loadingCoverView.image = nil
+            if let coverURL = info.coverURL {
+                loadingCoverView.kf.setImage(with: coverURL)
+            }
+            if loadingIndicator == nil, let overlay = playerContentOverlayView {
+                let indicator = UIActivityIndicatorView(style: .large)
+                indicator.startAnimating()
+                overlay.addSubview(indicator)
+                indicator.snp.makeConstraints { $0.center.equalToSuperview() }
+                loadingIndicator = indicator
+            }
+        }
         if currentRetryKey != info.sequenceKey {
             currentRetryKey = info.sequenceKey
             hasRetriedCurrentItem = false

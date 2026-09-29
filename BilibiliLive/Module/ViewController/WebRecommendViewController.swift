@@ -1,21 +1,23 @@
 import Foundation
 import UIKit
 
-final class TVRecommendViewController: StandardVideoCollectionViewController<TVRecommendItem> {
+final class WebRecommendViewController: StandardVideoCollectionViewController<WebRecommendItem> {
     override func setupCollectionView() {
         super.setupCollectionView()
         collectionVC.pageSize = 12
         collectionVC.isShowCove = true
+        collectionVC.loadViewIfNeeded()
+        collectionVC.collectionView.contentInset.top = SegmentViewController.contentTopInset
     }
 
-    override func request(page: Int) async throws -> [TVRecommendItem] {
-        collectionVC.headerText = "TV推荐"
+    override func request(page: Int) async throws -> [WebRecommendItem] {
+        collectionVC.headerText = "网页端推荐"
         let response = try await WebRequest.requestTopFeedRecommend(pageIndex: page)
-        return response.item.compactMap(TVRecommendItem.init)
+        return response.item.compactMap(WebRecommendItem.init)
     }
 }
 
-struct TVRecommendItem: PlayableData {
+struct WebRecommendItem: PlayableData {
     let aid: Int
     let cid: Int
     let title: String

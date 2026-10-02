@@ -88,4 +88,18 @@ iOSInjectionProject/
 
 # End of https://www.toptal.com/developers/gitignore/api/swift
 fastlane/README.md
-fastlane/Fastfile
+
+# Local files, signing credentials and verification output
+.DS_Store
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+*.xcresult
+*.log
+
+# Duplicate source images; app assets already contain identical copies.
+/2 2.jpg
+/4 2.jpg

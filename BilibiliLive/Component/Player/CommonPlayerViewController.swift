@@ -16,6 +16,7 @@ class CommonPlayerViewController: UIViewController {
     private var observations = Set<NSKeyValueObservation>()
     private var rateObserver: NSKeyValueObservation?
     private var statusObserver: NSKeyValueObservation?
+    private weak var startedPlayerItem: AVPlayerItem?
     private var playToEndObserver: Any?
     private var playbackStalledObserver: Any?
     private var isEnd = false
@@ -157,6 +158,7 @@ class CommonPlayerViewController: UIViewController {
     private func cleanUpObserver() {
         rateObserver = nil
         statusObserver = nil
+        startedPlayerItem = nil
         if let playToEndObserver {
             NotificationCenter.default.removeObserver(playToEndObserver)
         }
@@ -188,6 +190,7 @@ extension CommonPlayerViewController {
     }
 
     private func playerRateDidChange(player: AVPlayer) {
+        guard playerVC.player === player else { return }
         if player.rate > 0 {
             activePlugins.forEach { $0.playerDidStart(player: player) }
             playerDidStart(player: player)
@@ -199,22 +202,25 @@ extension CommonPlayerViewController {
     }
 
     private func observePlayerItem(_ playerItem: AVPlayerItem) {
-        statusObserver = playerItem.observe(\.status, options: [.new, .old]) {
+        statusObserver = playerItem.observe(\.status, options: [.initial, .new, .old]) {
             [weak self] item, _ in
-            guard let self, let player = playerVC.player else { return }
-            switch item.status {
-            case .readyToPlay:
-                isEnd = false
-                activePlugins.forEach { $0.playerWillStart(player: player) }
-                playerWillStart(player: player)
-                if autoPlayWhenReady {
-                    player.play()
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let player = self.playerVC.player,
+                      player.currentItem === item else { return }
+                switch item.status {
+                case .readyToPlay:
+                    guard self.startedPlayerItem !== item else { return }
+                    self.startedPlayerItem = item
+                    self.isEnd = false
+                    self.activePlugins.forEach { $0.playerWillStart(player: player) }
+                    self.playerWillStart(player: player)
+                    if self.autoPlayWhenReady { player.play() }
+                case .failed:
+                    self.activePlugins.forEach { $0.playerDidFail(player: player) }
+                    self.playerDidFail(player: player)
+                default:
+                    break
                 }
-            case .failed:
-                activePlugins.forEach { $0.playerDidFail(player: player) }
-                playerDidFail(player: player)
-            default:
-                break
             }
         }
         if let playToEndObserver {

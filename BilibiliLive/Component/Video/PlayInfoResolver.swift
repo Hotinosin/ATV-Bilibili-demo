@@ -51,7 +51,7 @@ enum PlayInfoResolver {
             resolved.epid = episode.id
             resolved.aid = episode.aid
             resolved.cid = episode.cid
-            if playInfo.epid ?? 0 == 0,
+            if playInfo.playTimeInSecond == nil,
                let progress = info.user_status?.progress,
                progress.last_ep_id == episode.id,
                progress.last_time > 0 {

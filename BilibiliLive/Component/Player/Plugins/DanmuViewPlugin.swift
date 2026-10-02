@@ -84,9 +84,9 @@ extension DanmuViewPlugin: CommonPlayerPlugin {
 
         // 添加新的 observer 并保存引用
         timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1),
-                                                      queue: DispatchQueue.global())
+                                                      queue: .main)
         { [weak self] time in
-            guard let self else { return }
+            guard let self, self.currentPlayer === player else { return }
             if !Defaults.shared.showDanmu { return }
             let seconds = time.seconds
             danmuProvider.playerTimeChange(time: seconds)

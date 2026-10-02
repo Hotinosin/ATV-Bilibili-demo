@@ -10,19 +10,20 @@ import Kingfisher
 import MediaPlayer
 
 enum AVPlayerMetaUtils {
-    static func setPlayerInfo(title: String?, subTitle: String?, desp: String?, pic: URL?, player: AVPlayer) async {
+    @MainActor
+    static func setTextInfo(title: String?, subTitle: String?, desp: String?, player: AVPlayer) {
         let desp = desp?.components(separatedBy: "\n").joined(separator: " ")
         let mapping: [AVMetadataIdentifier: Any?] = [
             .commonIdentifierTitle: title,
             .iTunesMetadataTrackSubTitle: subTitle,
             .commonIdentifierDescription: desp,
         ]
-        var metas = mapping.compactMap { createMetadataItem(for: $0, value: $1) }
+        player.currentItem?.externalMetadata = mapping.compactMap { createMetadataItem(for: $0, value: $1) }
+    }
 
-        MainActor.callSafely {
-            player.currentItem?.externalMetadata = metas
-        }
-
+    @MainActor
+    static func setPlayerInfo(title: String?, subTitle: String?, desp: String?, pic: URL?, player: AVPlayer) async {
+        guard let playerItem = player.currentItem else { return }
         var nowPlayingInfo: [String: Any] = [
             MPMediaItemPropertyTitle: title ?? "",
             MPMediaItemPropertyArtist: subTitle ?? "",
@@ -39,15 +40,14 @@ enum AVPlayerMetaUtils {
            let data = resource.image.pngData(),
            let item = createMetadataItem(for: .commonIdentifierArtwork, value: data)
         {
-            metas.append(item)
-            MainActor.callSafely {
-                player.currentItem?.externalMetadata = metas
-            }
+            guard !Task.isCancelled, player.currentItem === playerItem else { return }
+            playerItem.externalMetadata.append(item)
 
             let artwork = MPMediaItemArtwork(boundsSize: resource.image.size) { _ in resource.image }
             nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
         }
 
+        guard !Task.isCancelled, player.currentItem === playerItem else { return }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
 

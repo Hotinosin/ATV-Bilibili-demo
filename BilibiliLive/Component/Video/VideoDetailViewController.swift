@@ -434,10 +434,11 @@ class VideoDetailViewController: UIViewController {
         }
         pageCollectionView.snp.makeConstraints { make in
             pageCollectionViewTopToTitleConstraint = make.top.equalTo(titleLabel.snp.bottom).offset(30).constraint
-            pageCollectionViewTopToRangeConstraint = make.top.equalTo(pageRangeCollectionView.snp.bottom).offset(30).constraint
             make.height.equalTo(300)
         }
-        pageCollectionViewTopToRangeConstraint?.deactivate()
+        pageCollectionView.snp.prepareConstraints { make in
+            pageCollectionViewTopToRangeConstraint = make.top.equalTo(pageRangeCollectionView.snp.bottom).offset(30).constraint
+        }
     }
 
     private func updatePageRanges() {
@@ -729,7 +730,7 @@ class VideoDetailViewController: UIViewController {
                 aid = epi.aid
                 cid = epi.cid
                 pages = season.episodes.filter { $0.section_type == 0 }.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.ep_id, from: "", part: $0.index + " " + ($0.index_title ?? "")) })
-                episodeCovers = Dictionary(uniqueKeysWithValues: season.episodes.map { ($0.ep_id, $0.cover) })
+                episodeCovers = Dictionary(season.episodes.map { ($0.ep_id, $0.cover) }, uniquingKeysWith: { first, _ in first })
 
                 let userEpisodeInfo = try await WebRequest.requestUserEpisodeInfo(epid: epi.ep_id)
 

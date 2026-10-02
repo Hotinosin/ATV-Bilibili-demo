@@ -87,6 +87,7 @@ class VideoDanmuProvider: DanmuProviderProtocol {
         await list
     }
 
+    @MainActor
     func fetchDanmuView() async {
         var reply: DmWebViewReply
         do {
@@ -105,6 +106,7 @@ class VideoDanmuProvider: DanmuProviderProtocol {
         Logger.debug("[dm] cid:\(cid!) up danmu cnt: \(dms.count)")
     }
 
+    @MainActor
     func fetchDanmuList(_ idx: Int) async {
         var reply: DmSegMobileReply
         do {
@@ -141,7 +143,7 @@ class VideoDanmuProvider: DanmuProviderProtocol {
     private func fetchMoreDanmuInBackground(time: TimeInterval) {
         func fetchDanmuInBackground(_ idx: Int) {
             segmentStatuses[idx] = true
-            Task.detached {
+            Task { @MainActor in
                 await self.fetchDanmuList(idx)
             }
             Logger.debug("[dm] cid:\(cid!) time:\(Int(time)) fetching sidx:\(idx)")
@@ -167,7 +169,7 @@ class VideoDanmuProvider: DanmuProviderProtocol {
     }
 
     func playerTimeChange(time: TimeInterval) {
-        guard cid != nil else { return }
+        guard cid != nil, time.isFinite, time >= 0, time < Double(Int.max) else { return }
 
         fetchMoreDanmuInBackground(time: time)
         let sidx = getSegmentIdx(time: time)

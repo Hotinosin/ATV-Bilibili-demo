@@ -224,15 +224,6 @@ extension FeedDisplayStyle {
         }
     }
 
-    var groupFractionalHeight: CGFloat {
-        switch self {
-        case .big:
-            return 2 / 5
-        case .large, .normal, .sideBar:
-            return 1 / 3
-        }
-    }
-
     var hSpacing: CGFloat {
         switch self {
         case .big:

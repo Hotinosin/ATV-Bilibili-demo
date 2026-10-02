@@ -27,17 +27,25 @@
 - 字幕
 
 
-###Apple tv+ 风格修改
-##1. 类Apple tv+ 主菜单
- ![](imgs/1.png)
-##2. 首页关注 可以显示 个人收藏首个目录的封面，可以直接播放
- ![](imgs/2.png)
-##3. 视频详情页面的布局
- ![](imgs/3.png)
+### 界面预览
 
-##4. 子菜单显示方式，失焦后自动隐藏
- ![](imgs/4.png)
- ![](imgs/5.png)
+#### 推荐首页
+![网页端推荐、移动端推荐与沉浸推荐](imgs/screenshot6.jpeg)
+
+#### 影视与横向筛选
+![影视分类、风格与地区筛选](imgs/screenshot4.jpeg)
+
+#### 视频详情
+![封面与玻璃效果简介卡片](imgs/screenshot1.jpeg)
+
+#### 推荐视频与热门评论
+![推荐视频与单行评论卡片](imgs/screenshot5.jpeg)
+
+#### 排行榜
+![排行榜与分类菜单](imgs/screenshot3.jpeg)
+
+#### 设置
+![两列设置页面与开关](imgs/screenshot2.jpeg)
 
 
 
@@ -45,7 +53,7 @@
  - https://t.me/appletvbilibilidemo
 
 ### 未签名iPA文件
-  登录Github账号并在GitHub Action 页面 https://github.com/yichengchen/ATV-Bilibili-demo/actions/workflows/build.yml 寻找最新 run 的底部 Artifacts 下载。
+  登录 GitHub 账号，在[本仓库的构建工作流](https://github.com/Hotinosin/ATV-Bilibili-demo/actions/workflows/build.yml)寻找最新成功运行底部的 Artifacts 下载。未签名 IPA 安装前需要签名。
 
 ### Links
 

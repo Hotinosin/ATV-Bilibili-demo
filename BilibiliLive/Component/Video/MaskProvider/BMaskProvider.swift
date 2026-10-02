@@ -128,9 +128,9 @@ class BMaskProvider: MaskProvider {
 
     func getMask(for time: CMTime, frame: CGRect, onGet: (CALayer) -> Void) {
         let time = time.seconds + 0.1
+        guard time.isFinite, time >= 0, time * 1000 <= Double(UInt32.max) else { return }
         guard time != lastTime else { return }
         lastTime = time
-        if time < 0 { return }
         let path = getLatestMaskFrame(byMiliSeconds: UInt32(time * Double(1000)))
         if path != nil {
             shapeLayer.path = path

@@ -16,6 +16,7 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
     let viewPoints: [PlayerInfo.ViewPoint]?
     private weak var configuredPlayer: AVPlayer?
     private weak var playerVC: AVPlayerViewController?
+    private var metadataTask: Task<Void, Never>?
 
     init(title: String?, subTitle: String?, desp: String?, pic: URL?, viewPoints: [PlayerInfo.ViewPoint]?) {
         self.title = title
@@ -37,24 +38,42 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
         updatePlayerInfo(player: player)
     }
 
+    func playerDidChange(player: AVPlayer) {
+        updatePlayerInfo(player: player)
+    }
+
+    func playerWillCleanUp(playerVC: AVPlayerViewController) {
+        metadataTask?.cancel()
+        metadataTask = nil
+        configuredPlayer = nil
+        self.playerVC = nil
+    }
+
+    deinit { metadataTask?.cancel() }
+
     private func updatePlayerInfo(player: AVPlayer) {
         guard configuredPlayer !== player else { return }
         configuredPlayer = player
-        Task {
+        metadataTask?.cancel()
+        MainActor.callSafely {
+            guard self.playerVC?.player === player else { return }
+            AVPlayerMetaUtils.setTextInfo(title: self.title, subTitle: self.subTitle, desp: self.desp, player: player)
+            if let playerVC = self.playerVC {
+                playerVC.customInfoViewControllers = sortedVideoInfoControllers(playerVC.customInfoViewControllers)
+            }
+        }
+        metadataTask = Task {
             async let info: () = AVPlayerMetaUtils.setPlayerInfo(title: title, subTitle: subTitle, desp: desp, pic: pic, player: player)
             if let viewPoints {
                 async let vp: () = updatePlayerCharpter(viewPoints: viewPoints, player: player)
                 await vp
             }
             await info
-            await MainActor.run { [weak self] in
-                guard let playerVC = self?.playerVC else { return }
-                playerVC.customInfoViewControllers = sortedVideoInfoControllers(playerVC.customInfoViewControllers)
-            }
         }
     }
 
     private func updatePlayerCharpter(viewPoints: [PlayerInfo.ViewPoint], player: AVPlayer) async {
+        guard let playerItem = player.currentItem else { return }
         _ = await withTaskGroup(of: Void.self) { group in
             for viewPoint in viewPoints {
                 group.addTask {
@@ -77,8 +96,10 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
 
         let metas = viewPoints.compactMap { convertTimedMetadataGroup(viewPoint: $0) }
 
+        guard !Task.isCancelled else { return }
         MainActor.callSafely {
-            player.currentItem?.navigationMarkerGroups = [AVNavigationMarkersGroup(title: nil, timedNavigationMarkers: metas)]
+            guard player.currentItem === playerItem else { return }
+            playerItem.navigationMarkerGroups = [AVNavigationMarkersGroup(title: nil, timedNavigationMarkers: metas)]
         }
     }
 

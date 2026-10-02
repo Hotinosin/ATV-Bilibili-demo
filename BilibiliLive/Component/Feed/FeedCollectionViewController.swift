@@ -304,12 +304,12 @@ class FeedCollectionViewController: UIViewController {
 
     private func makeCollectionViewLayout() -> UICollectionViewLayout {
         UICollectionViewCompositionalLayout {
-            [weak self] index, _ in
-            self?.makeGridLayoutSection(isOldRecommendations: index == 1)
+            [weak self] index, environment in
+            self?.makeGridLayoutSection(isOldRecommendations: index == 1, availableWidth: environment.container.effectiveContentSize.width)
         }
     }
 
-    private func makeGridLayoutSection(isOldRecommendations: Bool) -> NSCollectionLayoutSection {
+    private func makeGridLayoutSection(isOldRecommendations: Bool, availableWidth: CGFloat) -> NSCollectionLayoutSection {
         let style = styleOverride ?? Settings.displayStyle
 
         // top
@@ -321,14 +321,16 @@ class FeedCollectionViewController: UIViewController {
         ))
         let hSpacing = style.hSpacing
         item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: hSpacing, bottom: 0, trailing: hSpacing)
+        let baseSpacing: CGFloat = reservesSidebarSpace ? 34 : 0
+        let coverWidth = max(0, (availableWidth - baseSpacing) / CGFloat(style.feedColCount) - hSpacing * 2)
+        let rowHeight = ceil(coverWidth * 9 / 16 + 14 + style.titleFont.lineHeight * 2 + 6 + style.upFont.lineHeight)
 
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1),
-            heightDimension: .fractionalHeight(style.groupFractionalHeight)
+            heightDimension: .absolute(rowHeight)
         ), repeatingSubitem: item, count: style.feedColCount)
 
         let vSpacing = style.vSpacing
-        let baseSpacing: CGFloat = reservesSidebarSpace ? 34 : 0
 
         group.edgeSpacing = NSCollectionLayoutEdgeSpacing(leading: .fixed(baseSpacing), top: .fixed(vSpacing), trailing: .fixed(0), bottom: .fixed(vSpacing))
 

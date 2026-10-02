@@ -68,16 +68,16 @@ final class CinemaListViewController: StandardVideoCollectionViewController<Cine
         super.setupCollectionView()
         collectionVC.pageSize = 24
         collectionVC.showHeader = true
-        collectionVC.customHeaderConfig = FeedHeaderConfig(viewType: CinemaFilterHeaderView.self, estimatedHeight: 180) { [weak self] header, _ in
+        collectionVC.customHeaderConfig = FeedHeaderConfig(viewType: CinemaFilterHeaderView.self, estimatedHeight: 164) { [weak self] header, _ in
             guard let self else { return }
             header.addSubview(self.filterPanel)
             self.filterPanel.snp.remakeConstraints { make in
-                make.top.bottom.equalToSuperview().inset(16)
-                make.leading.trailing.equalToSuperview().inset(100)
+                make.top.bottom.equalToSuperview().inset(8)
+                make.leading.trailing.equalToSuperview().inset((self.collectionVC.styleOverride ?? Settings.displayStyle).hSpacing)
             }
         }
         collectionVC.loadViewIfNeeded()
-        collectionVC.collectionView.contentInset = UIEdgeInsets(top: 100, left: 0, bottom: 40, right: 0)
+        collectionVC.collectionView.contentInset = UIEdgeInsets(top: SegmentViewController.contentTopInset, left: 0, bottom: 40, right: 0)
     }
 
     override func request(page: Int) async throws -> [CinemaIndexItem] {
@@ -119,7 +119,7 @@ final class CinemaListViewController: StandardVideoCollectionViewController<Cine
         let label = UILabel()
         label.text = title
         label.textColor = .white
-        label.font = .systemFont(ofSize: 26, weight: .semibold)
+        label.font = .systemFont(ofSize: 28, weight: .semibold)
         group.addArrangedSubview(label)
         label.snp.makeConstraints { make in
             make.width.equalTo(76)
@@ -197,7 +197,7 @@ private final class CinemaFilterOptionButton: UIButton {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        titleLabel?.font = .systemFont(ofSize: 22, weight: .medium)
+        titleLabel?.font = .systemFont(ofSize: 24, weight: .medium)
         updateAppearance()
     }
 

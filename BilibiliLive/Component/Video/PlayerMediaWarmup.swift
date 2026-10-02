@@ -46,6 +46,12 @@ enum PlayerMediaFactory {
         guard playable else {
             throw "加载资源失败"
         }
+        do {
+            _ = try await asset.load(.commonMetadata)
+        } catch {
+            Logger.warn("[player] Failed to preload metadata: \(error)")
+        }
+        try Task.checkCancellation()
         try await withTaskCancellationHandler {
             await delegate.prewarmPrimaryVideoIndex()
             try Task.checkCancellation()

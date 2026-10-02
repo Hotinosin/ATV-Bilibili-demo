@@ -271,13 +271,15 @@ class VideoPlayerViewModel {
                                         playInfo: PlayInfo) -> Int?
     {
         if let startTimeOverride,
+           startTimeOverride >= 0,
            startTimeOverrideContentIdentity == playInfo.contentIdentity,
-           duration - startTimeOverride > 5
+           duration <= 0 || duration - startTimeOverride > 5
         {
             return startTimeOverride
         }
         if lastPlayCid == cid,
-           duration - playTimeInSecond > 5,
+           playTimeInSecond > 0,
+           duration <= 0 || duration - playTimeInSecond > 5,
            Settings.continuePlay
         {
             return playTimeInSecond
